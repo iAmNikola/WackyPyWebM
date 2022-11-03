@@ -1,2 +1,2 @@
 # WackyPyWebM
-Python implementation of github.com/OIRNOIR/WackyWebM
+Python implementation of [OIRNOIR's WackyWebM](https://github.com/OIRNOIR/WackyWebM)
