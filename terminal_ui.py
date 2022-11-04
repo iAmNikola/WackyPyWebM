@@ -16,9 +16,17 @@ if os.name == 'nt':
 _MODES: List = list(wackypywebm.MODES.keys())
 _SELECTED_MODE: int = _MODES.index('bounce')
 
+_KEYS_TO_FLAGS = {
+    'b': '--bitrate',
+    't': '--thread',
+    'o': '--output',
+    'c': '--compression',
+    's': '--smoothing',
+}
+
 
 def stage1():
-    def draw_stage1():
+    def draw():
         util.clear()
         print(colored(f'{localize_str("select_mode_arrows")}\n', attrs=['bold', 'underline']))
         tmp = []
@@ -46,9 +54,13 @@ def stage1():
         return False
 
     while True:
-        draw_stage1()
+        draw()
         key_pressed = get_key_press()
         if set_selected_mode(key_pressed):
+            if _MODES[_SELECTED_MODE] == ['keyframes', 'angle', 'transparency']:
+                _KEYS_TO_FLAGS['x'] = f'--{_MODES[_SELECTED_MODE]}'
+            elif _MODES[_SELECTED_MODE] in ['bounce', 'shutter']:
+                _KEYS_TO_FLAGS['x'] = '--tempo'
             break
 
 
