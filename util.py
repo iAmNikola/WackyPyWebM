@@ -95,9 +95,9 @@ def getch_but_it_actually_works() -> str:
     else:                        # if buffer was empty then we return a single
         return wchar             # key like "e" or "\x1b" for the ESC button
 
-##########################
-## End of borrowed code ##
-##########################
+#########################
+## End of Markus' code ##
+#########################
 
 # Common keys codes
 KEY_CODES = {
