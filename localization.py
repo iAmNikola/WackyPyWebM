@@ -26,6 +26,6 @@ def localize_str(key: str, args: Dict = None) -> str:
 
     if args:
         for arg, value in args.items():
-            raw_text.replace('{%s}'.format(arg), value)
+            raw_text = raw_text.replace(f'{{arg}}', value)
 
     return raw_text
