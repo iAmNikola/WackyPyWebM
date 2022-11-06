@@ -76,13 +76,13 @@ def set_options():
         else:
             print(colored(f'{localize_str("change_options")}\n', attrs=['bold', 'underline']))
 
-        for flag, arg in _KEYS_TO_FLAGS.items():
-            print(f'{flag}: {get_arg_desc(arg)}')
+        for key, flag in _KEYS_TO_FLAGS.items():
+            print(f'{key}: {get_arg_desc(flag)}')
 
         if _FLAGS:
             print(colored(f'\n{localize_str("current_arg_values")}', attrs=['bold', 'underline']))
-        for arg, value in _FLAGS.items():
-            print(f'--{arg} = "{value}"')
+        for flag, value in _FLAGS.items():
+            print(f'--{flag} = "{value}"')
 
     def draw_arg_input(flag: str):
         util.clear()
@@ -121,6 +121,39 @@ def set_options():
         draw_file_input(file_not_found=True)
 
 
+def review_options():
+    def draw():
+        util.clear()
+        print(colored(localize_str('review_settings'), attrs=['bold', 'underline']))
+        print(colored(localize_str('r_s_mode'), attrs=['underline']), _MODES[_SELECTED_MODE])
+        print(colored(localize_str('r_s_args'), attrs=['underline']))
+        for key, value in _FLAGS:
+            print(f'    {key}: "{value}"')
+        print(colored(localize_str('r_s_file'), attrs=['underline']), _FILEPATH)
+
+    global _FLAGS
+    draw()
+    while True:
+        if get_key_press() == KEY_CODES['ENTER']:
+            if 'bitrate' not in _FLAGS:
+                _FLAGS['bitrate'] = '1M'
+            if 'thread' not in _FLAGS:
+                _FLAGS['thread'] = 2
+            if 'tempo' not in _FLAGS:
+                _FLAGS['tempo'] = 2
+            if 'angle' not in _FLAGS:
+                _FLAGS['angle'] = 360
+            if 'compression' not in _FLAGS:
+                _FLAGS['compression'] = 0
+            if 'transparency' not in _FLAGS:
+                _FLAGS['transparency'] = 1
+            if 'smoothing' not in _FLAGS:
+                _FLAGS['smoothing'] = 0
+            if 'output' not in _FLAGS:
+                _FLAGS['output'] = str(_FILEPATH.parent / f'{_FILEPATH.stem}_{_MODES[_SELECTED_MODE]}.webm')
+            break
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--lang', choices=localization.get_locales(), default='en_us')
@@ -130,3 +163,4 @@ if __name__ == '__main__':
 
     mode_selection()
     set_options()
+    review_options()
