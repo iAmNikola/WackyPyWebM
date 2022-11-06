@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path
 from typing import Dict, List
 
 from termcolor import colored
@@ -64,6 +65,7 @@ _KEYS_TO_FLAGS: Dict[str, str] = {
     's': 'smoothing',
 }
 _FLAGS: Dict[str, str] = {}
+_FILEPATH: Path = None
 
 
 def set_options():
@@ -82,27 +84,41 @@ def set_options():
         for arg, value in _FLAGS.items():
             print(f'--{arg} = "{value}"')
 
-    def draw_input(flag: str):
+    def draw_arg_input(flag: str):
         util.clear()
         text = localize_str("enter_arg_value", args={'arg': flag})
         print(colored(f'{text}', attrs=['bold', 'underline']))
         if _FLAGS.get(flag):
-            print(f'Current value: "{_FLAGS[flag]}"')
+            print(f'Current value: "{_FLAGS[flag]}"\n')
 
     def configure_options(key: str):
         if key == KEY_CODES['ENTER']:
             return True
         if key.lower() not in _KEYS_TO_FLAGS:
             return False
-        draw_input(_KEYS_TO_FLAGS[key.lower()])
+        draw_arg_input(_KEYS_TO_FLAGS[key.lower()])
         value = input('Set value: ')
         if value:
             _FLAGS[_KEYS_TO_FLAGS[key]] = value
+
+    def draw_file_input(file_not_found: bool = False):
+        util.clear()
+        if file_not_found:
+            print(colored(localize_str('file_not_found'), attrs=['bold', 'underline']))
+        print(colored(localize_str('enter_file_path'), attrs=['bold', 'underline']))
 
     while True:
         draw_options()
         if configure_options(get_key_press()):
             break
+
+    global _FILEPATH
+    draw_file_input()
+    while True:
+        _FILEPATH = Path(input()).resolve()
+        if _FILEPATH.is_file():
+            break
+        draw_file_input(file_not_found=True)
 
 
 if __name__ == '__main__':
