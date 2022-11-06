@@ -82,19 +82,19 @@ def set_options():
         for arg, value in _FLAGS.items():
             print(f'--{arg} = "{value}"')
 
-    def draw_input(flag: str):
+    def draw_arg_input(flag: str):
         util.clear()
         text = localize_str("enter_arg_value", args={'arg': flag})
         print(colored(f'{text}', attrs=['bold', 'underline']))
         if _FLAGS.get(flag):
-            print(f'Current value: "{_FLAGS[flag]}"')
+            print(f'Current value: "{_FLAGS[flag]}"\n')
 
     def configure_options(key: str):
         if key == KEY_CODES['ENTER']:
             return True
         if key.lower() not in _KEYS_TO_FLAGS:
             return False
-        draw_input(_KEYS_TO_FLAGS[key.lower()])
+        draw_arg_input(_KEYS_TO_FLAGS[key.lower()])
         value = input('Set value: ')
         if value:
             _FLAGS[_KEYS_TO_FLAGS[key]] = value
