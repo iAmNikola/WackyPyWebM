@@ -24,8 +24,7 @@ _KEYS_TO_FLAGS = {
     's': '--smoothing',
 }
 
-
-def stage1():
+def mode_selection():
     def draw():
         util.clear()
         print(colored(f'{localize_str("select_mode_arrows")}\n', attrs=['bold', 'underline']))
@@ -55,12 +54,12 @@ def stage1():
 
     while True:
         draw()
-        key_pressed = get_key_press()
-        if set_selected_mode(key_pressed):
-            if _MODES[_SELECTED_MODE] == ['keyframes', 'angle', 'transparency']:
-                _KEYS_TO_FLAGS['x'] = f'--{_MODES[_SELECTED_MODE]}'
+        if set_selected_mode(get_key_press()):
+            if _MODES[_SELECTED_MODE] in ['keyframes', 'angle', 'transparency']:
+                _KEYS_TO_FLAGS['x'] = f'{_MODES[_SELECTED_MODE]}'
             elif _MODES[_SELECTED_MODE] in ['bounce', 'shutter']:
-                _KEYS_TO_FLAGS['x'] = '--tempo'
+                _KEYS_TO_FLAGS['x'] = 'tempo'
+
             break
 
 
@@ -71,4 +70,4 @@ if __name__ == '__main__':
 
     localization.set_locale(args.lang)
 
-    stage1()
+    mode_selection()
