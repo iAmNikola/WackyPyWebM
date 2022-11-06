@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path
 from typing import Dict, List
 
 from termcolor import colored
@@ -64,6 +65,7 @@ _KEYS_TO_FLAGS: Dict[str, str] = {
     's': 'smoothing',
 }
 _FLAGS: Dict[str, str] = {}
+_FILEPATH: Path = None
 
 
 def set_options():
@@ -99,10 +101,24 @@ def set_options():
         if value:
             _FLAGS[_KEYS_TO_FLAGS[key]] = value
 
+    def draw_file_input(file_not_found: bool = False):
+        util.clear()
+        if file_not_found:
+            print(colored(localize_str('file_not_found'), attrs=['bold', 'underline']))
+        print(colored(localize_str('enter_file_path'), attrs=['bold', 'underline']))
+
     while True:
         draw_options()
         if configure_options(get_key_press()):
             break
+
+    global _FILEPATH
+    draw_file_input()
+    while True:
+        _FILEPATH = Path(input()).resolve()
+        if _FILEPATH.is_file():
+            break
+        draw_file_input(file_not_found=True)
 
 
 if __name__ == '__main__':
