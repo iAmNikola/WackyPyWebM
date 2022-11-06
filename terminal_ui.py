@@ -76,13 +76,13 @@ def set_options():
         else:
             print(colored(f'{localize_str("change_options")}\n', attrs=['bold', 'underline']))
 
-        for flag, arg in _KEYS_TO_FLAGS.items():
-            print(f'{flag}: {get_arg_desc(arg)}')
+        for key, flag in _KEYS_TO_FLAGS.items():
+            print(f'{key}: {get_arg_desc(flag)}')
 
         if _FLAGS:
             print(colored(f'\n{localize_str("current_arg_values")}', attrs=['bold', 'underline']))
-        for arg, value in _FLAGS.items():
-            print(f'--{arg} = "{value}"')
+        for flag, value in _FLAGS.items():
+            print(f'--{flag} = "{value}"')
 
     def draw_arg_input(flag: str):
         util.clear()
