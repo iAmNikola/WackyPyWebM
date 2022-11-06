@@ -1,12 +1,13 @@
 import argparse
 import os
-from typing import List
+from typing import Dict, List
 
 from termcolor import colored
 
 import localization
 import util
 import wackypywebm
+from args_util import get_arg_desc
 from localization import localize_str
 from util import KEY_CODES, get_key_press
 
@@ -16,13 +17,6 @@ if os.name == 'nt':
 _MODES: List = list(wackypywebm.MODES.keys())
 _SELECTED_MODE: int = _MODES.index('bounce')
 
-_KEYS_TO_FLAGS = {
-    'b': '--bitrate',
-    't': '--thread',
-    'o': '--output',
-    'c': '--compression',
-    's': '--smoothing',
-}
 
 def mode_selection():
     def draw():
@@ -59,7 +53,55 @@ def mode_selection():
                 _KEYS_TO_FLAGS['x'] = f'{_MODES[_SELECTED_MODE]}'
             elif _MODES[_SELECTED_MODE] in ['bounce', 'shutter']:
                 _KEYS_TO_FLAGS['x'] = 'tempo'
+            break
 
+
+_KEYS_TO_FLAGS: Dict[str, str] = {
+    'b': 'bitrate',
+    't': 'threads',
+    'o': 'output',
+    'c': 'compression',
+    's': 'smoothing',
+}
+_FLAGS: Dict[str, str] = {}
+
+
+def set_options():
+    def draw_options():
+        util.clear()
+        if _MODES[_SELECTED_MODE] == 'keyframes':
+            print(colored(f'{localize_str("change_options_k")}\n', attrs=['bold', 'underline']))
+        else:
+            print(colored(f'{localize_str("change_options")}\n', attrs=['bold', 'underline']))
+
+        for flag, arg in _KEYS_TO_FLAGS.items():
+            print(f'{flag}: {get_arg_desc(arg)}')
+
+        if _FLAGS:
+            print(colored(f'\n{localize_str("current_arg_values")}', attrs=['bold', 'underline']))
+        for arg, value in _FLAGS.items():
+            print(f'--{arg} = "{value}"')
+
+    def draw_input(flag: str):
+        util.clear()
+        text = localize_str("enter_arg_value", args={'arg': flag})
+        print(colored(f'{text}', attrs=['bold', 'underline']))
+        if _FLAGS.get(flag):
+            print(f'Current value: "{_FLAGS[flag]}"')
+
+    def configure_options(key: str):
+        if key == KEY_CODES['ENTER']:
+            return True
+        if key.lower() not in _KEYS_TO_FLAGS:
+            return False
+        draw_input(_KEYS_TO_FLAGS[key.lower()])
+        value = input('Set value: ')
+        if value:
+            _FLAGS[_KEYS_TO_FLAGS[key]] = value
+
+    while True:
+        draw_options()
+        if configure_options(get_key_press()):
             break
 
 
@@ -71,3 +113,4 @@ if __name__ == '__main__':
     localization.set_locale(args.lang)
 
     mode_selection()
+    set_options()
