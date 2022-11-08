@@ -1,7 +1,7 @@
 import argparse
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from termcolor import colored
 
@@ -19,7 +19,7 @@ _MODES: List = list(wackypywebm.MODES.keys())
 _SELECTED_MODE: int = _MODES.index('bounce')
 
 
-def mode_selection():
+def mode_selection() -> Dict[str, str]:
     def draw():
         util.clear()
         print(colored(f'{localize_str("select_mode_arrows")}\n', attrs=['bold', 'underline']))
@@ -47,28 +47,28 @@ def mode_selection():
                 _SELECTED_MODE += 1
         return False
 
+    keys_to_flags: Dict[str, str] = {
+        'b': 'bitrate',
+        't': 'threads',
+        'o': 'output',
+        'c': 'compression',
+        's': 'smoothing',
+    }
+
     while True:
         draw()
         if set_selected_mode(get_key_press()):
             if _MODES[_SELECTED_MODE] in ['keyframes', 'angle', 'transparency']:
-                _KEYS_TO_FLAGS['x'] = f'{_MODES[_SELECTED_MODE]}'
+                keys_to_flags['x'] = f'{_MODES[_SELECTED_MODE]}'
             elif _MODES[_SELECTED_MODE] in ['bounce', 'shutter']:
-                _KEYS_TO_FLAGS['x'] = 'tempo'
-            break
+                keys_to_flags['x'] = 'tempo'
+            return keys_to_flags
 
 
-_KEYS_TO_FLAGS: Dict[str, str] = {
-    'b': 'bitrate',
-    't': 'threads',
-    'o': 'output',
-    'c': 'compression',
-    's': 'smoothing',
-}
-_FLAGS: Dict[str, str] = {}
-_FILEPATH: Path = None
+def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
+    flags: Dict[str, str] = {}
+    filepath: Path = None
 
-
-def set_options():
     def draw_options():
         util.clear()
         if _MODES[_SELECTED_MODE] == 'keyframes':
@@ -76,30 +76,35 @@ def set_options():
         else:
             print(colored(f'{localize_str("change_options")}\n', attrs=['bold', 'underline']))
 
-        for key, flag in _KEYS_TO_FLAGS.items():
+        for key, flag in keys_to_flags.items():
             print(f'{key}: {get_arg_desc(flag)}')
 
-        if _FLAGS:
+        if flags:
             print(colored(f'\n{localize_str("current_arg_values")}', attrs=['bold', 'underline']))
-        for flag, value in _FLAGS.items():
+        for flag, value in flags.items():
             print(f'--{flag} = "{value}"')
 
     def draw_arg_input(flag: str):
         util.clear()
         text = localize_str("enter_arg_value", args={'arg': flag})
         print(colored(f'{text}', attrs=['bold', 'underline']))
-        if _FLAGS.get(flag):
-            print(f'Current value: "{_FLAGS[flag]}"\n')
+        if flags.get(flag):
+            print(f'Current value: "{flags[flag]}"\n')
 
     def configure_options(key: str):
         if key == KEY_CODES['ENTER']:
             return True
-        if key.lower() not in _KEYS_TO_FLAGS:
+        if key.lower() not in keys_to_flags:
             return False
-        draw_arg_input(_KEYS_TO_FLAGS[key.lower()])
+        draw_arg_input(keys_to_flags[key.lower()])
         value = input('Set value: ')
         if value:
-            _FLAGS[_KEYS_TO_FLAGS[key]] = value
+            flags[keys_to_flags[key]] = value
+
+    while True:
+        draw_options()
+        if configure_options(get_key_press()):
+            break
 
     def draw_file_input(file_not_found: bool = False):
         util.clear()
@@ -107,51 +112,44 @@ def set_options():
             print(colored(localize_str('file_not_found'), attrs=['bold', 'underline']))
         print(colored(localize_str('enter_file_path'), attrs=['bold', 'underline']))
 
-    while True:
-        draw_options()
-        if configure_options(get_key_press()):
-            break
-
-    global _FILEPATH
     draw_file_input()
     while True:
-        _FILEPATH = Path(input()).resolve()
-        if _FILEPATH.is_file():
-            break
+        filepath = Path(input()).resolve()
+        if filepath.is_file():
+            return flags, filepath
         draw_file_input(file_not_found=True)
 
 
-def review_options():
+def review_options(flags: Dict[str, str], filepath: Path):
     def draw():
         util.clear()
         print(colored(localize_str('review_settings'), attrs=['bold', 'underline']))
         print(colored(localize_str('r_s_mode'), attrs=['underline']), _MODES[_SELECTED_MODE])
         print(colored(localize_str('r_s_args'), attrs=['underline']))
-        for key, value in _FLAGS:
+        for key, value in flags.items():
             print(f'    {key}: "{value}"')
-        print(colored(localize_str('r_s_file'), attrs=['underline']), _FILEPATH)
+        print(colored(localize_str('r_s_file'), attrs=['underline']), filepath)
 
-    global _FLAGS
     draw()
     while True:
         if get_key_press() == KEY_CODES['ENTER']:
-            if 'bitrate' not in _FLAGS:
-                _FLAGS['bitrate'] = '1M'
-            if 'thread' not in _FLAGS:
-                _FLAGS['thread'] = 2
-            if 'tempo' not in _FLAGS:
-                _FLAGS['tempo'] = 2
-            if 'angle' not in _FLAGS:
-                _FLAGS['angle'] = 360
-            if 'compression' not in _FLAGS:
-                _FLAGS['compression'] = 0
-            if 'transparency' not in _FLAGS:
-                _FLAGS['transparency'] = 1
-            if 'smoothing' not in _FLAGS:
-                _FLAGS['smoothing'] = 0
-            if 'output' not in _FLAGS:
-                _FLAGS['output'] = str(_FILEPATH.parent / f'{_FILEPATH.stem}_{_MODES[_SELECTED_MODE]}.webm')
-            break
+            if 'bitrate' not in flags:
+                flags['bitrate'] = '1M'
+            if 'thread' not in flags:
+                flags['thread'] = 2
+            if 'tempo' not in flags:
+                flags['tempo'] = 2
+            if 'angle' not in flags:
+                flags['angle'] = 360
+            if 'compression' not in flags:
+                flags['compression'] = 0
+            if 'transparency' not in flags:
+                flags['transparency'] = 1
+            if 'smoothing' not in flags:
+                flags['smoothing'] = 0
+            if 'output' not in flags:
+                flags['output'] = str(filepath.parent / f'{filepath.stem}_{_MODES[_SELECTED_MODE]}.webm')
+            return flags
 
 
 if __name__ == '__main__':
@@ -161,6 +159,6 @@ if __name__ == '__main__':
 
     localization.set_locale(args.lang)
 
-    mode_selection()
-    set_options()
-    review_options()
+    keys_to_flags = mode_selection()
+    flags, filepath = set_options(keys_to_flags)
+    flags = review_options(flags, filepath)
