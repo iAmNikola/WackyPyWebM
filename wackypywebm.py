@@ -71,6 +71,15 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     print_config(args, video_info)
 
+    print(localize_str('creating_temp_dirs'))
+    build_tmp_paths()
+
+    print(localize_str('splitting_audio'))
+    has_audio = splitting_successful = split_audio(video_path)
+
+    print(localize_str('splitting_frames'))
+    split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
+
 
 if __name__ == '__main__':
     ARGS = PARSER.parse_args(['/home/wd-nikolad/work/scripts/out.mp4'])
