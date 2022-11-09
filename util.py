@@ -131,3 +131,28 @@ def get_key_press():
     if key.upper() == 'Q':
         exit(0)
     return key
+
+
+TMP_PATHS: Dict[str, Path] = {}
+
+
+def build_tmp_paths():
+    global TMP_PATHS
+    tmp_folder = Path(__file__).resolve().parent / 'tempFiles'
+    
+    tmp_frames = tmp_folder / 'tempFrames'
+    tmp_frames.mkdir(parents=True, exist_ok=True)
+    tmp_resized_frames = tmp_folder / 'tempResizedFrames'
+    tmp_resized_frames.mkdir(parents=True, exist_ok=True)
+    
+    tmp_audio = tmp_folder / 'tempAudio.webm'
+    tmp_concat_list = tmp_folder / 'tempConcatList.txt'
+    tmp_frame_files = tmp_frames / '%06d.png'
+
+    TMP_PATHS['tmp_folder'] = tmp_folder
+    TMP_PATHS['tmp_frames'] = tmp_frames
+    TMP_PATHS['tmp_resized_frames'] = tmp_resized_frames
+    TMP_PATHS['tmp_audio'] = tmp_audio
+    TMP_PATHS['tmp_concat_list'] = tmp_concat_list
+    TMP_PATHS['tmp_frame_files'] = tmp_frame_files
+    
