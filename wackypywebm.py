@@ -29,6 +29,27 @@ def parse_arguments(args: Dict[str, Any]):
 def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], output_path: Path):
     parse_arguments(args)
 
+    video_info = get_video_info(video_path)
+    (width, height), fps, bitrate, num_frames = video_info
+
+    if args['bitrate'] is None:
+        args['bitrate'] = min(bitrate or 500000, 1000000)
+
+    # TODO: delta and info 1 impl
+
+    print(
+        localize_str(
+            'info2',
+            args={
+                'w': width,
+                'h': height,
+                'framerate': fps,
+                'decframerate': parse_fps(fps),
+                'bitrate': bitrate,
+            },
+        )
+    )
+
 
 
 if __name__ == '__main__':
