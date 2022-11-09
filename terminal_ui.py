@@ -154,10 +154,10 @@ def review_options(flags: Dict[str, str], file_path: Path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lang', choices=localization.get_locales(), default='en_us')
+    parser.add_argument('--language', choices=localization.get_locales(), default='en_us')
     args = parser.parse_args()
 
-    localization.set_locale(args.lang)
+    localization.set_locale(args.language)
 
     keys_to_flags = mode_selection()
     flags, file_path = set_options(keys_to_flags)
