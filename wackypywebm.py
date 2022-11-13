@@ -1,10 +1,13 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from natsort import natsorted
+
 from args_util import PARSER
 from ffmpeg_util import get_video_info, parse_fps, split_audio, split_frames
 from localization import localize_str, set_locale
-from util import build_tmp_paths
+from modes.interfaces import BaseInfo, SplitInfo
+from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size
 
 # TODO: Load modes dynamically
 MODES = {
@@ -54,7 +57,8 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     if args['bitrate'] is None:
         args['bitrate'] = min(bitrate or 500000, 1000000)
 
-    # TODO: delta and info 1 impl
+    delta: int = find_min_non_error_size(width, height)
+    print(localize_str('info', args={'delta': delta, 'video': video_path}))
 
     print(
         localize_str(
@@ -79,6 +83,13 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     print(localize_str('splitting_frames'))
     split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
+
+    split_info = SplitInfo(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
+
+    base_info = BaseInfo(width, height, num_frames, parse_fps(fps), args['tempo'], args['agnle'], args['transparency'])
+
+    for l in natsorted(TMP_PATHS['tmp_frames'].glob('.png')):
+        ...
 
 
 if __name__ == '__main__':
