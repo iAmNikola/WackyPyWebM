@@ -1,3 +1,4 @@
+import math
 import os
 from pathlib import Path
 from typing import Dict
@@ -139,12 +140,12 @@ TMP_PATHS: Dict[str, Path] = {}
 def build_tmp_paths():
     global TMP_PATHS
     tmp_folder = Path(__file__).resolve().parent / 'tempFiles'
-    
+
     tmp_frames = tmp_folder / 'tempFrames'
     tmp_frames.mkdir(parents=True, exist_ok=True)
     tmp_resized_frames = tmp_folder / 'tempResizedFrames'
     tmp_resized_frames.mkdir(parents=True, exist_ok=True)
-    
+
     tmp_audio = tmp_folder / 'tempAudio.webm'
     tmp_concat_list = tmp_folder / 'tempConcatList.txt'
     tmp_frame_files = tmp_frames / '%06d.png'
@@ -155,4 +156,45 @@ def build_tmp_paths():
     TMP_PATHS['tmp_audio'] = tmp_audio
     TMP_PATHS['tmp_concat_list'] = tmp_concat_list
     TMP_PATHS['tmp_frame_files'] = tmp_frame_files
-    
+
+
+def find_min_non_error_size(width, height):
+    def av_reduce_succeeds(num, den):
+        MAX = 255
+        a0 = [0, 1]
+        a1 = [1, 0]
+        gcd = math.gcd(num, den)
+
+        if gcd > 1:
+            num //= gcd
+            den //= gcd
+
+        if num <= MAX and den <= MAX:
+            a1 = [num, den]
+            den = 0
+
+        while den:
+            x = num // den
+            next_den = num - den * x
+            a2n = x * a1[0] + a0[0]
+            a2d = x * a1[1] + a0[1]
+
+            if a2n > MAX or a2d > MAX:
+                if a1[0]:
+                    x = (MAX - a0[0]) // a1[0]
+                if a1[1]:
+                    x = min(x, (MAX - a0[1]) // a1[1])
+                if (den * (2 * x * a1[1] + a0[1])) > (num * a1[1]):
+                    a1 = [x * a1[0] + a0[0], x * a1[1] + a0[1]]
+                break
+
+            a0 = a1
+            a1 = [a2n, a2d]
+            num = den
+            den = next_den
+
+        return math.gcd(a1[0], a1[1]) <= 1 and (a1[0] <= MAX and a1[1] <= MAX) and a1[0] > 0 and a1[1] > 0
+
+    for i in range(1, max(width, height)):
+        if av_reduce_succeeds(i, height) and av_reduce_succeeds(width, i):
+            return i
