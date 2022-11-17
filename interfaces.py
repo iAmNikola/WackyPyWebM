@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Tuple
 
 
 @dataclass
@@ -21,3 +23,12 @@ class BaseInfo:
     tempo: float
     angle: float
     transparency: int
+
+
+class ModeBase(ABC):
+    def setup():
+        pass
+
+    @abstractmethod
+    def get_frame_bounds() -> Tuple[int, int]:
+        pass

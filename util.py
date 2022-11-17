@@ -198,3 +198,11 @@ def find_min_non_error_size(width, height):
     for i in range(1, max(width, height)):
         if av_reduce_succeeds(i, height) and av_reduce_succeeds(width, i):
             return i
+
+
+def load_modes():
+    modes = {}
+    for mode in (Path(__file__).resolve().parent / 'modes').glob('*.py'):
+        modes[mode.stem] = __import__(f'modes.{mode.stem}', fromlist=['Mode']).Mode
+    return modes
+

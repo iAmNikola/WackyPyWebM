@@ -6,16 +6,11 @@ from natsort import natsorted
 from args_util import PARSER
 from ffmpeg_util import get_video_info, parse_fps, split_audio, split_frames
 from localization import localize_str, set_locale
-from modes.interfaces import BaseInfo, SplitInfo
-from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size
+from interfaces import BaseInfo, SplitInfo, ModeBase
+from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes
 
-# TODO: Load modes dynamically
-MODES = {
-    'audiobounce': None,
-    'bounce': None,
-    'speed': None,
-    'keyframes': None,
-}
+
+MODES: Dict[str, ModeBase] = load_modes()
 _SELECTED_MODES: List[str] = []
 
 
