@@ -5,6 +5,7 @@ from natsort import natsorted
 
 from args_util import PARSER
 from ffmpeg_util import get_video_info, parse_fps, split_audio, split_frames
+from interfaces import BaseInfo, ModeBase, SetupInfo
 from localization import localize_str, set_locale
 from interfaces import BaseInfo, SplitInfo, ModeBase
 from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes
@@ -79,11 +80,13 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     print(localize_str('splitting_frames'))
     split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
 
-    split_info = SplitInfo(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
-
+    setup_info = SetupInfo(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
     base_info = BaseInfo(width, height, num_frames, parse_fps(fps), args['tempo'], args['agnle'], args['transparency'])
 
-    for l in natsorted(TMP_PATHS['tmp_frames'].glob('.png')):
+    for mode in selected_modes:
+        MODES[mode].setup(setup_info)
+
+    for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png'))):
         ...
 
 

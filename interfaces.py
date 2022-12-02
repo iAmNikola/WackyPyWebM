@@ -5,7 +5,7 @@ from typing import Tuple
 
 
 @dataclass
-class SplitInfo:
+class SetupInfo:
     video_path: Path
     width: int
     height: int
@@ -26,7 +26,7 @@ class BaseInfo:
 
 
 class ModeBase(ABC):
-    def setup():
+    def setup(setup_info: SetupInfo):
         pass
 
     @abstractmethod
