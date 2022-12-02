@@ -88,11 +88,21 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     start_time = time.perf_counter()
     print(localize_str('starting_conversion'))
 
-    frame_size_smoothing_buffer = [[width, height] for i in range(args.smoothing)]
+    frame_size_smoothing_buffer = [[width, height] for i in range(args['smoothing'])]
     fssb_i = 0
 
     for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png'))):
-        ...
+        info = base_info.extend(i, frame_path)
+
+        frame_bounds = [width, height]
+        for mode in selected_modes:
+            frame_width, frame_height = MODES[mode].get_frame_bounds(info)
+            frame_bounds[0] = frame_width or frame_bounds[0]
+            frame_bounds[1] = frame_height or frame_bounds[1]
+
+        if frame_size_smoothing_buffer:
+            frame_size_smoothing_buffer[fssb_i] = frame_bounds
+            fssb_i = (fssb_i + 1) % args['smoothing']
 
     end_time = time.perf_counter()
 
