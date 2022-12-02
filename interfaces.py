@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -30,5 +30,5 @@ class ModeBase(ABC):
         pass
 
     @abstractmethod
-    def get_frame_bounds() -> Tuple[int, int]:
+    def get_frame_bounds() -> Tuple[Optional[int], Optional[int]]:
         pass
