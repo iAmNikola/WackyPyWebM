@@ -24,11 +24,30 @@ class BaseInfo:
     angle: float
     transparency: int
 
+    def extend(self, frame_index: int, frame_path: Path):
+        return Info(
+            self.width,
+            self.height,
+            self.num_frames,
+            self.fps,
+            self.tempo,
+            self.angle,
+            self.transparency,
+            frame_index,
+            frame_path,
+        )
+
+
+@dataclass
+class Info(BaseInfo):
+    frame_index: int
+    frame_path: Path
+
 
 class ModeBase(ABC):
     def setup(setup_info: SetupInfo):
         pass
 
     @abstractmethod
-    def get_frame_bounds() -> Tuple[Optional[int], Optional[int]]:
+    def get_frame_bounds(info: Info) -> Tuple[Optional[int], Optional[int]]:
         pass
