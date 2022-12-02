@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -7,9 +8,7 @@ from args_util import PARSER
 from ffmpeg_util import get_video_info, parse_fps, split_audio, split_frames
 from interfaces import BaseInfo, ModeBase, SetupInfo
 from localization import localize_str, set_locale
-from interfaces import BaseInfo, SplitInfo, ModeBase
 from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes
-
 
 MODES: Dict[str, ModeBase] = load_modes()
 _SELECTED_MODES: List[str] = []
@@ -86,8 +85,16 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     for mode in selected_modes:
         MODES[mode].setup(setup_info)
 
+    start_time = time.perf_counter()
+    print(localize_str('starting_conversion'))
+
+    frame_size_smoothing_buffer = [[width, height] for i in range(args.smoothing)]
+    fssb_i = 0
+
     for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png'))):
         ...
+
+    end_time = time.perf_counter()
 
 
 if __name__ == '__main__':
