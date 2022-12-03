@@ -5,6 +5,7 @@ from pathlib import Path
 from threading import Lock
 from typing import List, Tuple
 
+from data import FrameAudioLevel
 from localization import localize_str
 from util import TMP_PATHS
 
@@ -116,3 +117,53 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
             end='',
         )
         _LOCK.release()
+
+
+def get_frames_audio_levels(video_path: Path):
+    try:
+        frames_dbs = subprocess.run(
+            [
+                'ffprobe',
+                '-f',
+                'lavfi',
+                '-i',
+                f"amovie='{video_path}',astats=metadata=1:reset=1",
+                '-show_entries',
+                'frame=pkt_pts_time:frame_tags=lavfi.astats.Overall.RMS_level',
+                '-of',
+                'json',
+            ],
+            bufsize=_MAX_BUFFER_SIZE,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            check=True,
+        )
+        highest: FrameAudioLevel = None
+        frames_audio_levels: List[FrameAudioLevel] = []
+        dbs_sum = 0
+        for i, frame_dbs in enumerate(json.loads(frames_dbs.stdout)['frames'], start=1):
+            fal = FrameAudioLevel.from_dict(i, frame_dbs)
+            frames_audio_levels.append(fal)
+
+            if highest is None:
+                highest = fal
+            else:
+                if fal.dbs > highest.dbs:
+                    highest = fal
+
+            dbs_sum += fal.dbs if fal.dbs != float('inf') else 0
+
+        average = dbs_sum / len(frames_audio_levels)
+        deviation = abs((highest.dbs - average) / 2)
+
+        for fal in frames_audio_levels:
+            clamped = max(min(fal.dbs, (average + deviation)), (average - deviation))
+            v = abs((clamped - average) / deviation) * 0.5
+            fal.percent_max = (0.5 + v) if clamped > average else (0.5 - v)
+
+        return frames_audio_levels
+
+    except subprocess.CalledProcessError as e:
+        ffmpeg_error_handler(e.stderr)
+        exit()
