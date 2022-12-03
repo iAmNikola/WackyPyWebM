@@ -21,32 +21,37 @@ def ffmpeg_error_handler(stderr: str):
 
 
 def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
-    video_data = subprocess.run(
-        [
-            'ffprobe',
-            '-v',
-            'error',
-            '-select_streams',
-            'v',
-            '-of',
-            'json',
-            '-count_frames',
-            '-show_entries',
-            'stream=r_frame_rate,width,height,nb_read_frames,bit_rate',
-            f'{video_path}',
-        ],
-        bufsize=_MAX_BUFFER_SIZE,
-        capture_output=True,
-        text=True,
-        encoding='utf-8',
-    )
-    stream_data = json.loads(video_data.stdout)['streams'][0]
-    return (
-        (stream_data['width'], stream_data['height']),
-        stream_data['r_frame_rate'],
-        int(stream_data['bit_rate']) if stream_data.get('bit_rate') else None,
-        int(stream_data['nb_read_frames']),
-    )
+    try:
+        video_data = subprocess.run(
+            [
+                'ffprobe',
+                '-v',
+                'error',
+                '-select_streams',
+                'v',
+                '-of',
+                'json',
+                '-count_frames',
+                '-show_entries',
+                'stream=r_frame_rate,width,height,nb_read_frames,bit_rate',
+                f'{video_path}',
+            ],
+            bufsize=_MAX_BUFFER_SIZE,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            check=True,
+        )
+        stream_data = json.loads(video_data.stdout)['streams'][0]
+        return (
+            (stream_data['width'], stream_data['height']),
+            stream_data['r_frame_rate'],
+            int(stream_data['bit_rate']) if stream_data.get('bit_rate') else None,
+            int(stream_data['nb_read_frames']),
+        )
+    except subprocess.CalledProcessError as e:
+        ffmpeg_error_handler(e.stderr)
+        exit()
 
 
 def split_audio(video_path: Path) -> bool:
@@ -65,7 +70,6 @@ def split_audio(video_path: Path) -> bool:
             ],
             bufsize=_MAX_BUFFER_SIZE,
             check=True,
-            stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError:
         print(localize_str('no_audio'))
