@@ -44,7 +44,7 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
     return (
         (stream_data['width'], stream_data['height']),
         stream_data['r_frame_rate'],
-        int(stream_data['bit_rate']),
+        int(stream_data['bit_rate']) if stream_data.get('bit_rate') else None,
         int(stream_data['nb_read_frames']),
     )
 
