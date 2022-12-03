@@ -1,11 +1,13 @@
+import math
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from natsort import natsorted
 
 from args_util import PARSER
-from ffmpeg_util import get_video_info, parse_fps, split_audio, split_frames
+from ffmpeg_util import execute_command, get_video_info, parse_fps, split_audio, split_frames
 from interfaces import BaseInfo, ModeBase, SetupInfo
 from localization import localize_str, set_locale
 from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes
@@ -53,7 +55,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
         args['bitrate'] = min(bitrate or 500000, 1000000)
 
     delta: int = find_min_non_error_size(width, height)
-    print(localize_str('info', args={'delta': delta, 'video': video_path}))
+    print(localize_str('info1', args={'delta': delta, 'video': video_path}))
 
     print(
         localize_str(
@@ -80,7 +82,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
 
     setup_info = SetupInfo(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
-    base_info = BaseInfo(width, height, num_frames, parse_fps(fps), args['tempo'], args['agnle'], args['transparency'])
+    base_info = BaseInfo(width, height, num_frames, parse_fps(fps), args['tempo'], args['angle'], args['transparency'])
 
     for mode in selected_modes:
         MODES[mode].setup(setup_info)
@@ -88,23 +90,83 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     start_time = time.perf_counter()
     print(localize_str('starting_conversion'))
 
+    same_size_count = 0
     frame_size_smoothing_buffer = [[width, height] for i in range(args['smoothing'])]
     fssb_i = 0
+    tmp_frame_files = TMP_PATHS['tmp_frame_files']
+    with ThreadPoolExecutor() as executor:
+        frames_processed = [False] * num_frames
+        for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png')), start=1):
+            info = base_info.extend((i - 1), frame_path)
 
-    for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png'))):
-        info = base_info.extend(i, frame_path)
+            frame_bounds = {'width': width, 'height': height}
+            for mode in selected_modes:
+                new_frame_bounds: Dict = MODES[mode].get_frame_bounds(info)
+                for key, value in new_frame_bounds.items():
+                    frame_bounds[key] = value
 
-        frame_bounds = [width, height]
-        for mode in selected_modes:
-            frame_width, frame_height = MODES[mode].get_frame_bounds(info)
-            frame_bounds[0] = frame_width or frame_bounds[0]
-            frame_bounds[1] = frame_height or frame_bounds[1]
+            if frame_size_smoothing_buffer:
+                frame_size_smoothing_buffer[fssb_i] = frame_bounds
+                fssb_i = (fssb_i + 1) % args['smoothing']
 
-        if frame_size_smoothing_buffer:
-            frame_size_smoothing_buffer[fssb_i] = frame_bounds
-            fssb_i = (fssb_i + 1) % args['smoothing']
+            if i == 1:
+                prev_width, prev_height = frame_bounds['width'], frame_bounds['height']
+
+            if (
+                (abs(frame_bounds['width'] - prev_width) + abs(frame_bounds['height'] - prev_height))
+                > args['compression']
+                or i == num_frames
+                or same_size_count > (num_frames // args['threads'])
+            ):
+                command = [
+                    'ffmpeg',
+                    '-y',
+                    '-r',
+                    fps,
+                    '-start_number',
+                    str(i - same_size_count),
+                    '-i',
+                    f'{tmp_frame_files}',
+                    '-frames:v',
+                    str(same_size_count) if i != num_frames else '1',
+                    '-c:v',
+                    'vp8',
+                    '-b:v',
+                    str(args['bitrate']),
+                    '-crf',
+                    '10',
+                    '-vf',
+                ]
+                if i != num_frames:
+                    vf_command = [f'scale={prev_width}x{prev_height}', '-aspect', f'{prev_width}:{prev_height}']
+                else:
+                    curr_width, curr_height = frame_bounds['width'], frame_bounds['height']
+                    vf_command = [f'scale={curr_width}x{curr_height}', '-aspect', f'{curr_width}:{curr_height}']
+
+                section_path = TMP_PATHS['tmp_resized_frames'] / (
+                    f'{frame_path.stem}.webm' if i != num_frames else 'end.webm'
+                )
+                command += vf_command + [
+                    '-threads',
+                    str(min(args['threads'], math.ceil(same_size_count / 10))) if i != num_frames else '1',
+                    '-f',
+                    'webm',
+                    '-auto-alt-ref',
+                    '0',
+                    f'{section_path}',
+                ]
+                executor.submit(execute_command, command, extra_data=(frames_processed, i, same_size_count, num_frames))
+
+                same_size_count = 1
+                prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
+            else:
+                same_size_count += 1
 
     end_time = time.perf_counter()
+    print()  # exit progress bar line
+    print(localize_str('done_conversion', args={'time': end_time - start_time, 'framecount': num_frames}))
+
+    print(localize_str('writing_concat_file'))
 
 
 if __name__ == '__main__':
