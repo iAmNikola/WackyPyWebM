@@ -21,7 +21,7 @@ PARSER.add_argument('-o', '--output', type=Path, help="Sets output path.")
 PARSER.add_argument(
     '-c', '--compression', type=int, default=0, help='Sets compression level. Higher values means more compression.'
 )
-PARSER.add_argument('-l', '--language', type=str, choices=get_locales(), help='Sets language.')
+PARSER.add_argument('-l', '--language', type=str, default='en_us', choices=get_locales(), help='Sets language.')
 PARSER.add_argument(
     '--transparency',
     type=int,
