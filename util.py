@@ -148,7 +148,7 @@ def build_tmp_paths():
 
     tmp_audio = tmp_folder / 'tempAudio.webm'
     tmp_concat_list = tmp_folder / 'tempConcatList.txt'
-    tmp_frame_files = tmp_frames / '%06d.png'
+    tmp_frame_files = tmp_frames / '%05d.png'
 
     TMP_PATHS['tmp_folder'] = tmp_folder
     TMP_PATHS['tmp_frames'] = tmp_frames
@@ -205,4 +205,3 @@ def load_modes():
     for mode in (Path(__file__).resolve().parent / 'modes').glob('*.py'):
         modes[mode.stem] = __import__(f'modes.{mode.stem}', fromlist=['Mode']).Mode
     return modes
-
