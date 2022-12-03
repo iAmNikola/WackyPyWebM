@@ -67,7 +67,7 @@ def mode_selection() -> Dict[str, str]:
 
 def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
     flags: Dict[str, str] = {}
-    filepath: Path = None
+    file_path: Path = None
 
     def draw_options():
         util.clear()
@@ -114,13 +114,13 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
 
     draw_file_input()
     while True:
-        filepath = Path(input()).resolve()
-        if filepath.is_file():
-            return flags, filepath
+        file_path = Path(input()).resolve()
+        if file_path.is_file():
+            return flags, file_path
         draw_file_input(file_not_found=True)
 
 
-def review_options(flags: Dict[str, str], filepath: Path):
+def review_options(flags: Dict[str, str], file_path: Path):
     def draw():
         util.clear()
         print(colored(localize_str('review_settings'), attrs=['bold', 'underline']))
@@ -128,7 +128,7 @@ def review_options(flags: Dict[str, str], filepath: Path):
         print(colored(localize_str('r_s_args'), attrs=['underline']))
         for key, value in flags.items():
             print(f'    {key}: "{value}"')
-        print(colored(localize_str('r_s_file'), attrs=['underline']), filepath)
+        print(colored(localize_str('r_s_file'), attrs=['underline']), file_path)
 
     draw()
     while True:
@@ -148,17 +148,19 @@ def review_options(flags: Dict[str, str], filepath: Path):
             if 'smoothing' not in flags:
                 flags['smoothing'] = 0
             if 'output' not in flags:
-                flags['output'] = str(filepath.parent / f'{filepath.stem}_{_MODES[_SELECTED_MODE]}.webm')
+                flags['output'] = str(file_path.parent / f'{file_path.stem}_{_MODES[_SELECTED_MODE]}.webm')
             return flags
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lang', choices=localization.get_locales(), default='en_us')
+    parser.add_argument('--language', choices=localization.get_locales(), default='en_us')
     args = parser.parse_args()
 
-    localization.set_locale(args.lang)
+    localization.set_locale(args.language)
 
     keys_to_flags = mode_selection()
-    flags, filepath = set_options(keys_to_flags)
-    flags = review_options(flags, filepath)
+    flags, file_path = set_options(keys_to_flags)
+    flags = review_options(flags, file_path)
+
+    wackypywebm.wackify([_MODES[_SELECTED_MODE]], file_path, flags, flags['output'])
