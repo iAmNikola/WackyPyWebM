@@ -1,4 +1,5 @@
 import math
+import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -6,11 +7,12 @@ from typing import Any, Dict, List, Tuple
 
 from natsort import natsorted
 
+import ffmpeg_util
 from args_util import PARSER
-from ffmpeg_util import execute_command, get_video_info, parse_fps, split_audio, split_frames
-from interfaces import BaseInfo, ModeBase, SetupInfo
+from data import BaseData, SetupData
 from localization import localize_str, set_locale
-from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes
+from modes.mode_base import ModeBase
+from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes, parse_fps
 
 MODES: Dict[str, ModeBase] = load_modes()
 _SELECTED_MODES: List[str] = []
@@ -48,7 +50,7 @@ def print_config(args: Dict[str, Any], video_info: Tuple[Tuple[int, int], str, i
 def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], output_path: Path):
     parse_arguments(args)
 
-    video_info = get_video_info(video_path)
+    video_info = ffmpeg_util.get_video_info(video_path)
     (width, height), fps, bitrate, num_frames = video_info
 
     if args['bitrate'] is None:
@@ -76,16 +78,16 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     build_tmp_paths()
 
     print(localize_str('splitting_audio'))
-    has_audio = splitting_successful = split_audio(video_path)
+    has_audio = splitting_successful = ffmpeg_util.split_audio(video_path)
 
     print(localize_str('splitting_frames'))
-    split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
+    ffmpeg_util.split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
 
-    setup_info = SetupInfo(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
-    base_info = BaseInfo(width, height, num_frames, parse_fps(fps), args['tempo'], args['angle'], args['transparency'])
+    setup_data = SetupData(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
+    base_data = BaseData(width, height, num_frames, parse_fps(fps), args['tempo'], args['angle'], args['transparency'])
 
     for mode in selected_modes:
-        MODES[mode].setup(setup_info)
+        MODES[mode].setup(setup_data)
 
     start_time = time.perf_counter()
     print(localize_str('starting_conversion'))
@@ -94,16 +96,20 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     frame_size_smoothing_buffer = [[width, height] for i in range(args['smoothing'])]
     fssb_i = 0
     tmp_frame_files = TMP_PATHS['tmp_frame_files']
+    tmp_webm_files = []
     with ThreadPoolExecutor() as executor:
         frames_processed = [False] * num_frames
         for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png')), start=1):
-            info = base_info.extend((i - 1), frame_path)
+            data = base_data.extend((i - 1), frame_path)
 
             frame_bounds = {'width': width, 'height': height}
             for mode in selected_modes:
-                new_frame_bounds: Dict = MODES[mode].get_frame_bounds(info)
+                new_frame_bounds: Dict = MODES[mode].get_frame_bounds(data)
                 for key, value in new_frame_bounds.items():
                     frame_bounds[key] = value
+
+            frame_bounds['width'] = max(min(frame_bounds['width'], width), delta)
+            frame_bounds['height'] = max(min(frame_bounds['height'], height), delta)
 
             if frame_size_smoothing_buffer:
                 frame_size_smoothing_buffer[fssb_i] = frame_bounds
@@ -155,8 +161,10 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     '0',
                     f'{section_path}',
                 ]
-                executor.submit(execute_command, command, extra_data=(frames_processed, i, same_size_count, num_frames))
-
+                executor.submit(
+                    ffmpeg_util.exec_command, command, extra_data=(frames_processed, i, same_size_count, num_frames)
+                )
+                tmp_webm_files.append(f'file {section_path}\n')
                 same_size_count = 1
                 prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
             else:
@@ -164,9 +172,21 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     end_time = time.perf_counter()
     print()  # exit progress bar line
-    print(localize_str('done_conversion', args={'time': end_time - start_time, 'framecount': num_frames}))
+    print(localize_str('done_conversion', args={'time': f'{end_time - start_time:.2f}', 'framecount': num_frames}))
 
     print(localize_str('writing_concat_file'))
+    with open(TMP_PATHS['tmp_concat_list'], 'w') as tmp_concat_list:
+        tmp_concat_list.writelines(tmp_webm_files)
+
+    print(localize_str(f'concatenating{"_audio" if has_audio else ""}'))
+    concatenate_command = ['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', str(TMP_PATHS['tmp_concat_list'])]
+    if has_audio:
+        concatenate_command += ['-i', str(TMP_PATHS['tmp_audio'])]
+    concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', str(output_path)]
+    ffmpeg_util.exec_command(concatenate_command)
+
+    print(localize_str('done_removing_temp'))
+    shutil.rmtree(TMP_PATHS['tmp_folder'])
 
 
 if __name__ == '__main__':

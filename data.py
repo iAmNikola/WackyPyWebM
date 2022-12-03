@@ -1,11 +1,9 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
 
 
 @dataclass
-class SetupInfo:
+class SetupData:
     video_path: Path
     width: int
     height: int
@@ -15,7 +13,7 @@ class SetupInfo:
 
 
 @dataclass
-class BaseInfo:
+class BaseData:
     width: int
     height: int
     num_frames: int
@@ -25,7 +23,7 @@ class BaseInfo:
     transparency: int
 
     def extend(self, frame_index: int, frame_path: Path):
-        return Info(
+        return Data(
             self.width,
             self.height,
             self.num_frames,
@@ -39,16 +37,6 @@ class BaseInfo:
 
 
 @dataclass
-class Info(BaseInfo):
+class Data(BaseData):
     frame_index: int
     frame_path: Path
-
-
-class ModeBase(ABC):
-    @classmethod
-    def setup(cls, setup_info: SetupInfo):
-        pass
-
-    @abstractmethod
-    def get_frame_bounds(info: Info) -> Dict[str, Any]:
-        pass

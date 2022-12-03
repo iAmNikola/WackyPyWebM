@@ -9,6 +9,7 @@ from localization import localize_str
 from util import TMP_PATHS
 
 _MAX_BUFFER_SIZE = 1024 * 1000 * 8  # 8Mb
+_LOCK = Lock()
 
 
 def ffmpeg_error_handler(stderr: str):
@@ -48,14 +49,6 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
     )
 
 
-def parse_fps(fps: str) -> float:
-    if '/' in fps:
-        fps = fps.split('/')
-        return int(fps[0]) / int(fps[1])
-    else:
-        return float(fps)
-
-
 def split_audio(video_path: Path) -> bool:
     tmp_audio = TMP_PATHS['tmp_audio']
     try:
@@ -93,10 +86,7 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
         exit()
 
 
-_LOCK = Lock()
-
-
-def execute_command(command: List[str], extra_data: Tuple[List[bool], int, int, int]):
+def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int] = None):
     try:
         out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, check=True)
     except subprocess.CalledProcessError as e:
@@ -104,7 +94,7 @@ def execute_command(command: List[str], extra_data: Tuple[List[bool], int, int, 
         return
     if extra_data:
         frames_processed, index, same_size_count, num_frames = extra_data
-        for i in range(index - same_size_count - 1, same_size_count - 1):
+        for i in range(index - same_size_count - 1, index - 1):
             frames_processed[i] = True
         _LOCK.acquire()
         print('\r', end='')

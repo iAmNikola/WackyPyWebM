@@ -203,5 +203,14 @@ def find_min_non_error_size(width, height):
 def load_modes():
     modes = {}
     for mode in (Path(__file__).resolve().parent / 'modes').glob('*.py'):
-        modes[mode.stem] = __import__(f'modes.{mode.stem}', fromlist=['Mode']).Mode
+        if mode.stem != 'mode_base':
+            modes[mode.stem] = __import__(f'modes.{mode.stem}', fromlist=['Mode']).Mode
     return modes
+
+
+def parse_fps(fps: str) -> float:
+    if '/' in fps:
+        fps = fps.split('/')
+        return int(fps[0]) / int(fps[1])
+    else:
+        return float(fps)
