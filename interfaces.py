@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict
 
 
 @dataclass
@@ -45,9 +45,10 @@ class Info(BaseInfo):
 
 
 class ModeBase(ABC):
-    def setup(setup_info: SetupInfo):
+    @classmethod
+    def setup(cls, setup_info: SetupInfo):
         pass
 
     @abstractmethod
-    def get_frame_bounds(info: Info) -> Tuple[Optional[int], Optional[int]]:
+    def get_frame_bounds(info: Info) -> Dict[str, Any]:
         pass
