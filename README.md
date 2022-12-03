@@ -4,6 +4,7 @@ Python implementation of [OIRNOIR's WackyWebM](https://github.com/OIRNOIR/WackyW
 Currently supported modes:
 - bounce
 - shrink
+- sporadic
 
 I plan to implement other modes that are supported by the original in the near future. 
 
