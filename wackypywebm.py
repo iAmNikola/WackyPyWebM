@@ -187,10 +187,11 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     print(localize_str('done_removing_temp'))
     shutil.rmtree(TMP_PATHS['tmp_folder'])
+    print('Wackified:', output_path)
 
 
 if __name__ == '__main__':
-    ARGS = PARSER.parse_args(['/home/wd-nikolad/work/scripts/out.mp4'])
+    ARGS = PARSER.parse_args()
 
     if ARGS.language:
         set_locale(ARGS.language)
