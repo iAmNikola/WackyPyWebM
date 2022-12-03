@@ -15,7 +15,7 @@ def ffmpeg_error_handler(stderr: str):
     error_message = re.findall(
         r'ffmpeg version [^\n]+\n(?:\s*built with [^\n]+\n|\s*lib[^\n]+\n|\s*configuration:[^\n]+\n)*([\s\S]*)',
         stderr,
-    )[1]
+    )[-1]
     print('FFMPEG ERROR:', error_message)
 
 
@@ -98,7 +98,7 @@ _LOCK = Lock()
 
 def execute_command(command: List[str], extra_data: Tuple[List[bool], int, int, int]):
     try:
-        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, check=True)
+        out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
         return
