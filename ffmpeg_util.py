@@ -87,7 +87,7 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
     tmp_frame_files = TMP_PATHS['tmp_frame_files']
     command += ['-i', f'{video_path}', f'{tmp_frame_files}']
     try:
-        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
         exit()
@@ -98,7 +98,7 @@ _LOCK = Lock()
 
 def execute_command(command: List[str], extra_data: Tuple[List[bool], int, int, int]):
     try:
-        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, stderr=subprocess.PIPE, text=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
         return
