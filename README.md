@@ -3,6 +3,7 @@ Python implementation of [OIRNOIR's WackyWebM](https://github.com/OIRNOIR/WackyW
 
 Currently supported modes:
 - audiobounce
+- audioshutter
 - bounce
 - shrink
 - sporadic
