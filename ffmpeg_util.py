@@ -10,7 +10,6 @@ from localization import localize_str
 from util import TMP_PATHS
 
 _MAX_BUFFER_SIZE = 1024 * 1000 * 8  # 8Mb
-_LOCK = Lock()
 
 
 def ffmpeg_error_handler(stderr: bytes):
@@ -104,8 +103,6 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
         frames_processed, index, same_size_count, num_frames = extra_data
         for i in range(index - same_size_count - 1, index - 1):
             frames_processed[i] = True
-        _LOCK.acquire()
-        print('\r', end='')
         print(
             localize_str(
                 'convert_progress',
@@ -117,9 +114,8 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
                     'percent': f'{100*frames_processed.count(True) / num_frames:.1f}',
                 },
             ),
-            end='',
+            end='\r',
         )
-        _LOCK.release()
 
 
 def get_frames_audio_levels(video_path: Path):
