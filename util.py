@@ -119,19 +119,18 @@ def getch_but_it_actually_works() -> str:
 
 # Common keys codes
 KEY_CODES = {
-    'CTRL+Z': '\x1a',
-    'CTRL+C': '\x03',
-    'ARROW_UP': '\x1b[A',
-    'ARROW_DOWN': '\x1b[B',
-    'ARROW_RIGHT': '\x1b[C',
-    'ARROW_LEFT': '\x1b[D',
+    'CTRL+[CZ]': ['\x1a', '\x03'],
+    'ARROW_UP': ['\x1b[A', '\x00H'],
+    'ARROW_DOWN': ['\x1b[B', '\x00P'],
+    'ARROW_RIGHT': ['\x1b[C', '\x00M'],
+    'ARROW_LEFT': ['\x1b[D', '\x00K'],
     'ENTER': '\r',
 }
 
 
 def get_key_press():
     key = getch_but_it_actually_works()
-    if key == KEY_CODES['CTRL+Z'] or key == KEY_CODES['CTRL+C']:
+    if key in KEY_CODES['CTRL+[CZ]']:
         raise KeyboardInterrupt
     if key.upper() == 'Q':
         exit(0)
