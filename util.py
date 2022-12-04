@@ -222,5 +222,5 @@ def parse_fps(fps: str) -> float:
 
 def get_valid_path(path: Path) -> str:
     if os.name == 'nt':
-        return f"'{str(path).replace('\\', '/\\').replace(':', r'\\')}'"
+        path = str(path).replace('\\', '/\\').replace(':', r'\\')
     return f"'{path}'"
