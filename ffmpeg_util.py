@@ -13,11 +13,15 @@ _MAX_BUFFER_SIZE = 1024 * 1000 * 8  # 8Mb
 _LOCK = Lock()
 
 
-def ffmpeg_error_handler(stderr: str):
+def ffmpeg_error_handler(stderr: bytes):
     error_message = re.findall(
         r'ffmpeg version [^\n]+\n(?:\s*built with [^\n]+\n|\s*lib[^\n]+\n|\s*configuration:[^\n]+\n)*([\s\S]*)',
-        stderr,
-    )[-1]
+        stderr.decode(),
+    )
+    if error_message:
+        error_message = error_message[-1]
+    else:
+        error_message = stderr.decode()
     print('FFMPEG ERROR:', error_message)
 
 
@@ -39,20 +43,18 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
             ],
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
-            text=True,
-            encoding='utf-8',
             check=True,
-        )
-        stream_data = json.loads(video_data.stdout)['streams'][0]
-        return (
-            (stream_data['width'], stream_data['height']),
-            stream_data['r_frame_rate'],
-            int(stream_data['bit_rate']) if stream_data.get('bit_rate') else None,
-            int(stream_data['nb_read_frames']),
         )
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
         exit()
+    stream_data = json.loads(video_data.stdout)['streams'][0]
+    return (
+        (stream_data['width'], stream_data['height']),
+        stream_data['r_frame_rate'],
+        int(stream_data['bit_rate']) if stream_data.get('bit_rate') else None,
+        int(stream_data['nb_read_frames']),
+    )
 
 
 def split_audio(video_path: Path) -> bool:
@@ -86,7 +88,7 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
     tmp_frame_files = TMP_PATHS['tmp_frame_files']
     command += ['-i', f'{video_path}', f'{tmp_frame_files}']
     try:
-        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, text=True, check=True)
+        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
         exit()
@@ -94,7 +96,7 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
 
 def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int] = None):
     try:
-        out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, text=True, check=True)
+        out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
         return
@@ -136,8 +138,6 @@ def get_frames_audio_levels(video_path: Path):
             ],
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
-            text=True,
-            encoding='utf-8',
             check=True,
         )
     except subprocess.CalledProcessError as e:
