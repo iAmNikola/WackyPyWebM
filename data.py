@@ -45,10 +45,9 @@ class Data(BaseData):
 
 @dataclass
 class FrameAudioLevel:
-    index: int
     dbs: float
     percent_max: float
 
     @classmethod
-    def from_dict(cls, index: int, frame_dbs: Dict[str, Dict[str, Union[str, float]]]) -> 'FrameAudioLevel':
-        return cls(index, float(frame_dbs['tags']['lavfi.astats.Overall.RMS_level']), None)
+    def from_dict(cls, frame_dbs: Dict[str, Dict[str, Union[str, float]]]) -> 'FrameAudioLevel':
+        return cls(float(frame_dbs['tags']['lavfi.astats.Overall.RMS_level']), None)
