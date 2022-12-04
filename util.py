@@ -224,5 +224,5 @@ def get_valid_path(path: Path, filter=False) -> str:
     if os.name == 'nt':
         path = str(path).replace('\\', '/\\')
         if filter:
-            path = path.replace(':', r'\\')
-    return f"'{path}'"
+            path = path.replace(':', r'\\:')
+    return path
