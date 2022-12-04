@@ -121,7 +121,7 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
 
 
 def get_frames_audio_levels(video_path: Path):
-    video_path = get_valid_path(video_path)
+    video_path = get_valid_path(video_path, filter=True)
     try:
         frames_dbs = subprocess.run(
             [
