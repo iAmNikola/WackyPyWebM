@@ -1,7 +1,8 @@
 import argparse
+import os
 from pathlib import Path
-from localization import get_locales
 
+from localization import get_locales
 
 # TODO: check if types of arguments are valid, transparency 1 or 0 thing too
 PARSER = argparse.ArgumentParser()
@@ -30,7 +31,7 @@ PARSER.add_argument(
     help='Sets the transparency threshold for use with the "Transparency" mode.',
 )
 PARSER.add_argument('-s', '--smoothing', type=int, default=0, help='Sets the level of smoothing to apply.')
-PARSER.add_argument('--threads', type=int, default=4, help='Sets maximum number of threads to use.')
+PARSER.add_argument('--threads', type=int, default=os.cpu_count() + 4, help='Sets maximum number of threads to use.')
 
 # TODO: I will see if I implement this functionality
 PARSER.add_argument('--no-update-check', action='store_true', help='Disables the automatic update check.')
