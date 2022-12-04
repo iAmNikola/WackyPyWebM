@@ -16,7 +16,7 @@ class Mode(ModeBase):
     @classmethod
     def get_frame_bounds(cls, data: Data):
         if data.frame_index == 0:
-            return {'height': data.height}
+            return {'width': data.width}
         else:
             fal = cls.frames_audio_levels[
                 max(
@@ -27,4 +27,4 @@ class Mode(ModeBase):
                     0,
                 )
             ]
-            return {'height': math.floor(abs(data.height * fal.percent_max))}
+            return {'width': math.floor(abs(data.width * fal.percent_max))}
