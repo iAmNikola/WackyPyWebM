@@ -35,12 +35,12 @@ def mode_selection() -> Dict[str, str]:
         global _SELECTED_MODE
         if key == KEY_CODES['ENTER']:
             return True
-        if key == KEY_CODES['ARROW_LEFT']:
+        if key in KEY_CODES['ARROW_LEFT']:
             if _SELECTED_MODE == 0:
                 _SELECTED_MODE = len(_MODES) - 1
             else:
                 _SELECTED_MODE -= 1
-        if key == KEY_CODES['ARROW_RIGHT']:
+        if key in KEY_CODES['ARROW_RIGHT']:
             if _SELECTED_MODE == (len(_MODES) - 1):
                 _SELECTED_MODE = 0
             else:
