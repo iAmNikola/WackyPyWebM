@@ -7,6 +7,7 @@ Currently supported modes:
 - bounce
 - shrink
 - sporadic
+- shutter
 
 I plan to implement other modes that are supported by the original in the near future. 
 
