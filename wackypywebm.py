@@ -149,11 +149,13 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     '10',
                     '-vf',
                 ]
-                if i != num_frames:
-                    vf_command = [f'scale={prev_width}x{prev_height}', '-aspect', f'{prev_width}:{prev_height}']
-                else:
-                    curr_width, curr_height = frame_bounds['width'], frame_bounds['height']
-                    vf_command = [f'scale={curr_width}x{curr_height}', '-aspect', f'{curr_width}:{curr_height}']
+                vf_command = frame_bounds.get('vf_command')
+                if vf_command is None:
+                    if i != num_frames:
+                        vf_command = [f'scale={prev_width}x{prev_height}', '-aspect', f'{prev_width}:{prev_height}']
+                    else:
+                        curr_width, curr_height = frame_bounds['width'], frame_bounds['height']
+                        vf_command = [f'scale={curr_width}x{curr_height}', '-aspect', f'{curr_width}:{curr_height}']
 
                 section_path = TMP_PATHS['tmp_resized_frames'] / (
                     f'{frame_path.stem}.webm' if i != num_frames else 'end.webm'
