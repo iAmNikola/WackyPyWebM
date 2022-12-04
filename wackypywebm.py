@@ -42,7 +42,7 @@ def print_config(selected_modes: List[str], args: Dict[str, Any], video_info: Tu
         print(localize_str('rotate_speed', args={'angle': args['angle']}))
     elif 'keyframes' in selected_modes:
         print(localize_str('keyframe_file', args={'file', args['keyframes']}))
-    if args['bitrate'] == bitrate:
+    if args['bitrate'] != bitrate:
         print(localize_str('output_bitrate', args={'bitrate': bitrate}))
     print(localize_str('config_footer'))
 
@@ -103,7 +103,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     fssb_i = 0
     tmp_frame_files = TMP_PATHS['tmp_frame_files']
     tmp_webm_files = []
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=args['threads']) as executor:
         frames_processed = [False] * num_frames
         for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png')), start=1):
             data = base_data.extend((i - 1), frame_path)
