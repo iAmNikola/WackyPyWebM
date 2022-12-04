@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Dict, Union
 
 
 @dataclass
@@ -40,3 +41,13 @@ class BaseData:
 class Data(BaseData):
     frame_index: int
     frame_path: Path
+
+
+@dataclass
+class FrameAudioLevel:
+    dbs: float
+    percent_max: float
+
+    @classmethod
+    def from_dict(cls, frame_dbs: Dict[str, Dict[str, Union[str, float]]]) -> 'FrameAudioLevel':
+        return cls(float(frame_dbs['tags']['lavfi.astats.Overall.RMS_level']), None)
