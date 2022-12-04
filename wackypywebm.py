@@ -146,7 +146,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     '-start_number',
                     str(i - same_size_count),
                     '-i',
-                    get_valid_path(tmp_frame_files),
+                    tmp_frame_files,
                     '-frames:v',
                     str(same_size_count) if i != num_frames else '1',
                     '-c:v',
@@ -175,12 +175,12 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     'webm',
                     '-auto-alt-ref',
                     '0',
-                    get_valid_path(section_path),
+                    section_path,
                 ]
                 executor.submit(
                     ffmpeg_util.exec_command, command, extra_data=(frames_processed, i, same_size_count, num_frames)
                 )
-                tmp_webm_files.append(f'file {section_path}\n')
+                tmp_webm_files.append(f'file {get_valid_path(section_path)}\n')
                 same_size_count = 1
                 prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
             else:
@@ -204,11 +204,11 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
         '-safe',
         '0',
         '-i',
-        get_valid_path(TMP_PATHS['tmp_concat_list']),
+        TMP_PATHS['tmp_concat_list'],
     ]
     if has_audio:
-        concatenate_command += ['-i', get_valid_path(TMP_PATHS['tmp_audio'])]
-    concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', get_valid_path(output_path)]
+        concatenate_command += ['-i', TMP_PATHS['tmp_audio']]
+    concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', output_path]
     ffmpeg_util.exec_command(concatenate_command)
 
     print(localize_str('done_removing_temp'))
