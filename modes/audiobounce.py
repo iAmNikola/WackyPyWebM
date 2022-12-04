@@ -4,7 +4,6 @@ from typing import List
 import ffmpeg_util
 from data import Data, FrameAudioLevel, SetupData
 from modes.mode_base import ModeBase
-from localization import localize_str
 
 
 class Mode(ModeBase):
