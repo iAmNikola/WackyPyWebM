@@ -218,3 +218,11 @@ def parse_fps(fps: str) -> float:
         return int(fps[0]) / int(fps[1])
     else:
         return float(fps)
+
+
+def get_valid_path(path: Path, filter=False) -> str:
+    if os.name == 'nt':
+        path = str(path).replace('\\', '/\\')
+        if filter:
+            path = path.replace(':', r'\\:')
+    return path

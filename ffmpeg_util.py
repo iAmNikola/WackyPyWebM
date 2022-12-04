@@ -2,14 +2,17 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from threading import Lock
 from typing import List, Tuple
 
 from data import FrameAudioLevel
 from localization import localize_str
-from util import TMP_PATHS
+from util import TMP_PATHS, get_valid_path
 
 _MAX_BUFFER_SIZE = 1024 * 1000 * 8  # 8Mb
+
+
+class FFMPEGExcption(Exception):
+    ...
 
 
 def ffmpeg_error_handler(stderr: bytes):
@@ -21,7 +24,7 @@ def ffmpeg_error_handler(stderr: bytes):
         error_message = error_message[-1]
     else:
         error_message = stderr.decode()
-    print('FFMPEG ERROR:', error_message)
+    raise FFMPEGExcption(error_message)
 
 
 def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
@@ -38,7 +41,7 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
                 '-count_frames',
                 '-show_entries',
                 'stream=r_frame_rate,width,height,nb_read_frames,bit_rate',
-                f'{video_path}',
+                video_path,
             ],
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
@@ -46,7 +49,6 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
         )
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
-        exit()
     stream_data = json.loads(video_data.stdout)['streams'][0]
     return (
         (stream_data['width'], stream_data['height']),
@@ -59,16 +61,16 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
 def split_audio(video_path: Path) -> bool:
     tmp_audio = TMP_PATHS['tmp_audio']
     try:
-        subprocess.run(
+        out = subprocess.run(
             [
                 'ffmpeg',
                 '-y',
                 '-i',
-                f'{video_path}',
+                video_path,
                 '-vn',
                 '-c:a',
                 'libvorbis',
-                f'{tmp_audio}',
+                tmp_audio,
             ],
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
@@ -84,13 +86,11 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
     command = ['ffmpeg', '-threads', f'{threads}', '-y']
     if transparent:
         command += ['-vcodec', 'libvpx']
-    tmp_frame_files = TMP_PATHS['tmp_frame_files']
-    command += ['-i', f'{video_path}', f'{tmp_frame_files}']
+    command += ['-i', video_path, TMP_PATHS['tmp_frame_files']]
     try:
-        subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
+        out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
-        exit()
 
 
 def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int] = None):
@@ -98,7 +98,6 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
         out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
-        return
     if extra_data:
         frames_processed, index, same_size_count, num_frames = extra_data
         for i in range(index - same_size_count - 1, index - 1):
@@ -126,7 +125,7 @@ def get_frames_audio_levels(video_path: Path):
                 '-f',
                 'lavfi',
                 '-i',
-                f"amovie='{video_path}',astats=metadata=1:reset=1",
+                f"amovie={get_valid_path(video_path, filter=True)},astats=metadata=1:reset=1",
                 '-show_entries',
                 'frame=pkt_pts_time:frame_tags=lavfi.astats.Overall.RMS_level',
                 '-of',
@@ -138,7 +137,6 @@ def get_frames_audio_levels(video_path: Path):
         )
     except subprocess.CalledProcessError as e:
         ffmpeg_error_handler(e.stderr)
-        exit()
 
     highest: float = None
     frames_audio_levels: List[FrameAudioLevel] = []
@@ -157,7 +155,6 @@ def get_frames_audio_levels(video_path: Path):
 
     if highest == float('-inf'):
         print(localize_str('no_audio'))
-        exit()
 
     average = dbs_sum / len(frames_audio_levels)
     deviation = abs((highest - average) / 2)

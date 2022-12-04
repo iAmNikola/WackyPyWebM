@@ -12,7 +12,15 @@ from args_util import PARSER
 from data import BaseData, SetupData
 from localization import localize_str, set_locale
 from modes.mode_base import ModeBase
-from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, fix_terminal, load_modes, parse_fps
+from util import (
+    TMP_PATHS,
+    build_tmp_paths,
+    find_min_non_error_size,
+    fix_terminal,
+    get_valid_path,
+    load_modes,
+    parse_fps,
+)
 
 MODES: Dict[str, ModeBase] = load_modes()
 _SELECTED_MODES: List[str] = []
@@ -138,7 +146,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     '-start_number',
                     str(i - same_size_count),
                     '-i',
-                    f'{tmp_frame_files}',
+                    tmp_frame_files,
                     '-frames:v',
                     str(same_size_count) if i != num_frames else '1',
                     '-c:v',
@@ -167,12 +175,12 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     'webm',
                     '-auto-alt-ref',
                     '0',
-                    f'{section_path}',
+                    section_path,
                 ]
                 executor.submit(
                     ffmpeg_util.exec_command, command, extra_data=(frames_processed, i, same_size_count, num_frames)
                 )
-                tmp_webm_files.append(f'file {section_path}\n')
+                tmp_webm_files.append(f'file {get_valid_path(section_path)}\n')
                 same_size_count = 1
                 prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
             else:
@@ -188,10 +196,19 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
         tmp_concat_list.writelines(tmp_webm_files)
 
     print(localize_str(f'concatenating{"_audio" if has_audio else ""}'))
-    concatenate_command = ['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', str(TMP_PATHS['tmp_concat_list'])]
+    concatenate_command = [
+        'ffmpeg',
+        '-y',
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        TMP_PATHS['tmp_concat_list'],
+    ]
     if has_audio:
-        concatenate_command += ['-i', str(TMP_PATHS['tmp_audio'])]
-    concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', str(output_path)]
+        concatenate_command += ['-i', TMP_PATHS['tmp_audio']]
+    concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', output_path]
     ffmpeg_util.exec_command(concatenate_command)
 
     print(localize_str('done_removing_temp'))
