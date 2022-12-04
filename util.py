@@ -8,6 +8,10 @@ def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
+def fix_terminal():
+    os.system('' if os.name == 'nt' else 'stty echo')
+
+
 ####################################################################
 ##  Bless Markus Hirsimäki: https://stackoverflow.com/a/72035449  ##
 ####################################################################
