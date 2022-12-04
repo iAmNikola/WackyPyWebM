@@ -12,7 +12,7 @@ from args_util import PARSER
 from data import BaseData, SetupData
 from localization import localize_str, set_locale
 from modes.mode_base import ModeBase
-from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, load_modes, parse_fps
+from util import TMP_PATHS, build_tmp_paths, find_min_non_error_size, fix_terminal, load_modes, parse_fps
 
 MODES: Dict[str, ModeBase] = load_modes()
 _SELECTED_MODES: List[str] = []
@@ -177,9 +177,10 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                 prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
             else:
                 same_size_count += 1
+    print()  # exit progress bar line
+    fix_terminal()
 
     end_time = time.perf_counter()
-    print()  # exit progress bar line
     print(localize_str('done_conversion', args={'time': f'{end_time - start_time:.2f}', 'framecount': num_frames}))
 
     print(localize_str('writing_concat_file'))
