@@ -87,6 +87,12 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     base_data = BaseData(width, height, num_frames, parse_fps(fps), args['tempo'], args['angle'], args['transparency'])
 
     for mode in selected_modes:
+        try:
+            if not has_audio and MODES[mode].frames_audio_levels:
+                print(f"ERROR: Mode '{mode.title()}' needs audio!")
+                exit()
+        except AttributeError:
+            pass
         MODES[mode].setup(setup_data)
 
     start_time = time.perf_counter()
