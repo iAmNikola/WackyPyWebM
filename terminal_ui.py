@@ -135,8 +135,8 @@ def review_options(flags: Dict[str, str], file_path: Path):
         if get_key_press() == KEY_CODES['ENTER']:
             if 'bitrate' not in flags:
                 flags['bitrate'] = '1M'
-            if 'thread' not in flags:
-                flags['thread'] = 2
+            if 'threads' not in flags:
+                flags['threads'] = 2
             if 'tempo' not in flags:
                 flags['tempo'] = 2
             if 'angle' not in flags:
@@ -149,6 +149,8 @@ def review_options(flags: Dict[str, str], file_path: Path):
                 flags['smoothing'] = 0
             if 'output' not in flags:
                 flags['output'] = str(file_path.parent / f'{file_path.stem}_{_MODES[_SELECTED_MODE]}.webm')
+            if 'keyframes' not in flags:
+                flags['keyframes'] = None
             return flags
 
 

@@ -32,15 +32,15 @@ def parse_arguments(args: Dict[str, Any]):
             args[key] = float(value)
 
 
-def print_config(args: Dict[str, Any], video_info: Tuple[Tuple[int, int], str, int, int]):
+def print_config(selected_modes: List[str], args: Dict[str, Any], video_info: Tuple[Tuple[int, int], str, int, int]):
     _, _, bitrate, _ = video_info
     print(localize_str('config_header'))
-    print(localize_str('config_mode_list', args={'modes': [mode.title() for mode in _SELECTED_MODES]}))
-    if 'bounce' in _SELECTED_MODES or 'shutter' in _SELECTED_MODES:
+    print(localize_str('config_mode_list', args={'modes': [mode.title() for mode in selected_modes]}))
+    if 'bounce' in selected_modes or 'shutter' in selected_modes:
         print(localize_str('bounce_speed', args={'tempo': args['tempo']}))
-    elif 'rotate' in _SELECTED_MODES:
+    elif 'rotate' in selected_modes:
         print(localize_str('rotate_speed', args={'angle': args['angle']}))
-    elif 'keyframes' in _SELECTED_MODES:
+    elif 'keyframes' in selected_modes:
         print(localize_str('keyframe_file', args={'file', args['keyframes']}))
     if args['bitrate'] == bitrate:
         print(localize_str('output_bitrate', args={'bitrate': bitrate}))
@@ -72,7 +72,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
         )
     )
 
-    print_config(args, video_info)
+    print_config(selected_modes, args, video_info)
 
     print(localize_str('creating_temp_dirs'))
     build_tmp_paths()
