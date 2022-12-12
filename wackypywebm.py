@@ -82,7 +82,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     print_config(selected_modes, args, video_info)
 
-    print(localize_str('creating_temp_dirs'))
+    print(localize_str('creating_temp_dirs', args={'path': TMP_PATHS['tmp_folder']}))
     build_tmp_paths()
 
     print(localize_str('splitting_audio'))
@@ -239,5 +239,8 @@ if __name__ == '__main__':
         ARGS.output.parent.mkdir(parents=True, exist_ok=True)
     else:
         ARGS.output = ARGS.file.parent / f'{ARGS.file.stem}_{"_".join(_SELECTED_MODES)}.webm'
-
-    wackify(_SELECTED_MODES, ARGS.file, vars(ARGS), ARGS.output)
+    try:
+        wackify(_SELECTED_MODES, ARGS.file, vars(ARGS), ARGS.output)
+    except:
+        print("Something unexpected happened. Cleaning up...")
+        shutil.rmtree(TMP_PATHS['tmp_folder'])
