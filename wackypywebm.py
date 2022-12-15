@@ -49,7 +49,7 @@ def print_config(selected_modes: List[str], args: Dict[str, Any], video_info: Tu
     elif 'rotate' in selected_modes:
         print(localize_str('rotate_speed', args={'angle': args['angle']}))
     elif 'keyframes' in selected_modes:
-        print(localize_str('keyframe_file', args={'file', args['keyframes']}))
+        print(localize_str('keyframe_file', args={'file': args['keyframes']}))
     if args['bitrate'] != bitrate:
         print(localize_str('output_bitrate', args={'bitrate': bitrate}))
     print(localize_str('config_footer'))
@@ -82,8 +82,8 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     print_config(selected_modes, args, video_info)
 
-    print(localize_str('creating_temp_dirs', args={'path': TMP_PATHS['tmp_folder']}))
     build_tmp_paths()
+    print(localize_str('creating_temp_dirs', args={'path': TMP_PATHS['tmp_folder']}))
 
     print(localize_str('splitting_audio'))
     has_audio = splitting_successful = ffmpeg_util.split_audio(video_path)
