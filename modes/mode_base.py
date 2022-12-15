@@ -8,6 +8,7 @@ class ModeBase(ABC):
     def setup(cls, setup_data: SetupData):
         pass
 
+    @classmethod
     @abstractmethod
-    def get_frame_bounds(data: Data) -> Dict[str, Any]:
+    def get_frame_bounds(cls, data: Data) -> Dict[str, Any]:
         pass
