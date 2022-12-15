@@ -5,6 +5,7 @@ Currently supported modes:
 - audiobounce
 - audioshutter
 - bounce
+- keyframes
 - rotate
 - shrink
 - sporadic
