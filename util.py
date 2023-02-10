@@ -9,6 +9,7 @@ def clear():
 
 
 def fix_terminal():
+    print()
     os.system('' if os.name == 'nt' else 'stty echo')
 
 

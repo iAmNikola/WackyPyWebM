@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Callable, Union
 import ffmpeg_util
 from data import Data, FrameAudioLevel, SetupData
 from localization import localize_str
-from modes.mode_base import ModeBase
+from modes.mode_base import ModeBase, FrameBounds
 
 
 class NumberOfFieldsInvalidException(Exception):
@@ -45,18 +45,18 @@ class InterpolationData:
 class Mode(ModeBase):
     keyframes: List[KeyframeData] = []
     kf_index = 0
-    interp_modes: Dict[str, Callable[[InterpolationData], Dict[str, Any]]] = {}
+    interp_modes: Dict[str, Callable[[str, InterpolationData], FrameBounds]] = {}
 
     @classmethod
-    def interpolation(cls, mode: str, data: InterpolationData, setup=False) -> Dict[str, Any]:
+    def interpolation(cls, mode: str, data: InterpolationData, setup=False) -> FrameBounds:
         def linear(data: InterpolationData):
-            return {
-                'width': math.floor(data.width + data.t * (data.next_width - data.width)),
-                'height': math.floor(data.height + data.t * (data.next_height - data.height)),
-            }
+            return FrameBounds(
+                width=math.floor(data.width + data.t * (data.next_width - data.width)),
+                height=math.floor(data.height + data.t * (data.next_height - data.height)),
+            )
 
         def instant(data: InterpolationData):
-            return {'width': data.width, 'height': data.height}
+            return FrameBounds(width=data.width, height=data.height)
 
         if setup:
             lcls = dict(locals())  # copy to dict to prevent error
@@ -72,7 +72,7 @@ class Mode(ModeBase):
         cls.parse_keyframe_file(setup_data.keyframe_file, setup_data.fps, setup_data.width, setup_data.height)
 
     @classmethod
-    def get_frame_bounds(cls, data: Data) -> Dict[str, Any]:
+    def get_frame_bounds(cls, data: Data) -> FrameBounds:
         incremented = False
         while cls.kf_index != len(cls.keyframes) - 1 and data.frame_index >= cls.keyframes[cls.kf_index + 1].time:
             if incremented:
@@ -81,10 +81,10 @@ class Mode(ModeBase):
             incremented = True
 
         if cls.kf_index == len(cls.keyframes) - 1:
-            return {
-                'width': cls.keyframes[cls.kf_index].width,
-                'height': cls.keyframes[cls.kf_index].height,
-            }
+            return FrameBounds(
+                width=cls.keyframes[cls.kf_index].width,
+                height=cls.keyframes[cls.kf_index].height,
+            )
 
         t = (data.frame_index - cls.keyframes[cls.kf_index].time) / (
             cls.keyframes[cls.kf_index + 1].time - cls.keyframes[cls.kf_index].time

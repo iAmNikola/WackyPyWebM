@@ -11,7 +11,7 @@ import ffmpeg_util
 from args_util import PARSER
 from data import BaseData, SetupData
 from localization import localize_str, set_locale
-from modes.mode_base import ModeBase
+from modes.mode_base import ModeBase, FrameBounds
 from util import (
     TMP_PATHS,
     build_tmp_paths,
@@ -116,24 +116,28 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
         for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png')), start=1):
             data = base_data.extend((i - 1), frame_path)
 
-            frame_bounds = {'width': width, 'height': height}
+            frame_bounds = FrameBounds(width=width, height=height)
             for mode in selected_modes:
-                new_frame_bounds: Dict = MODES[mode].get_frame_bounds(data)
-                for key, value in new_frame_bounds.items():
-                    frame_bounds[key] = value
+                new_frame_bounds = MODES[mode].get_frame_bounds(data)
+                if new_frame_bounds.width is not None:
+                    frame_bounds.width = new_frame_bounds.width
+                if new_frame_bounds.height is not None:
+                    frame_bounds.height = new_frame_bounds.height
+                if new_frame_bounds.vf_command is not None:
+                    frame_bounds.vf_command = new_frame_bounds.vf_command
 
-            frame_bounds['width'] = max(min(frame_bounds['width'], width), delta)
-            frame_bounds['height'] = max(min(frame_bounds['height'], height), delta)
+            frame_bounds.width = max(min(frame_bounds.width, width), delta)
+            frame_bounds.height = max(min(frame_bounds.height, width), delta)
 
             if frame_size_smoothing_buffer:
                 frame_size_smoothing_buffer[fssb_i] = frame_bounds
                 fssb_i = (fssb_i + 1) % args['smoothing']
 
             if i == 1:
-                prev_width, prev_height = frame_bounds['width'], frame_bounds['height']
+                prev_frame = FrameBounds.copy(frame_bounds)
 
             if (
-                (abs(frame_bounds['width'] - prev_width) + abs(frame_bounds['height'] - prev_height))
+                (abs(frame_bounds.width - prev_frame.width) + abs(frame_bounds.height - prev_frame.height))
                 > args['compression']
                 or i == num_frames
                 or same_size_count > (num_frames // args['threads'])
@@ -157,13 +161,20 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     '10',
                     '-vf',
                 ]
-                vf_command = frame_bounds.get('vf_command')
+                vf_command = frame_bounds.vf_command
                 if vf_command is None:
                     if i != num_frames:
-                        vf_command = [f'scale={prev_width}x{prev_height}', '-aspect', f'{prev_width}:{prev_height}']
+                        vf_command = [
+                            f'scale={prev_frame.width}x{prev_frame.width}',
+                            '-aspect',
+                            f'{prev_frame.width}:{prev_frame.width}',
+                        ]
                     else:
-                        curr_width, curr_height = frame_bounds['width'], frame_bounds['height']
-                        vf_command = [f'scale={curr_width}x{curr_height}', '-aspect', f'{curr_width}:{curr_height}']
+                        vf_command = [
+                            f'scale={frame_bounds.width}x{frame_bounds.height}',
+                            '-aspect',
+                            f'{frame_bounds.width}:{frame_bounds.height}',
+                        ]
 
                 section_path = TMP_PATHS['tmp_resized_frames'] / (
                     f'{frame_path.stem}.webm' if i != num_frames else 'end.webm'
@@ -182,11 +193,10 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                 )
                 tmp_webm_files.append(f'file {get_valid_path(section_path)}\n')
                 same_size_count = 1
-                prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
+                prev_frame = FrameBounds.copy(frame_bounds)
             else:
                 same_size_count += 1
-    print()  # exit progress bar line
-    fix_terminal()
+    fix_terminal()  # exit progress bar line
 
     end_time = time.perf_counter()
     print(localize_str('done_conversion', args={'time': f'{end_time - start_time:.2f}', 'framecount': num_frames}))

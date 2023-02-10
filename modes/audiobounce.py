@@ -3,7 +3,7 @@ from typing import List
 
 import ffmpeg_util
 from data import Data, FrameAudioLevel, SetupData
-from modes.mode_base import ModeBase
+from modes.mode_base import FrameBounds, ModeBase
 
 
 class Mode(ModeBase):
@@ -14,9 +14,9 @@ class Mode(ModeBase):
         cls.frames_audio_levels = ffmpeg_util.get_frames_audio_levels(setup_data.video_path)
 
     @classmethod
-    def get_frame_bounds(cls, data: Data):
+    def get_frame_bounds(cls, data: Data) -> FrameBounds:
         if data.frame_index == 0:
-            return {'height': data.height}
+            return FrameBounds(height=data.height)
         else:
             fal = cls.frames_audio_levels[
                 max(
@@ -27,4 +27,4 @@ class Mode(ModeBase):
                     0,
                 )
             ]
-            return {'height': math.floor(abs(data.height * fal.percent_max))}
+            return FrameBounds(height=math.floor(abs(data.height * fal.percent_max)))
