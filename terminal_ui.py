@@ -8,7 +8,7 @@ from termcolor import colored
 import localization
 import util
 import wackypywebm
-from args_util import get_arg_desc
+from args_util import get_arg_desc, IArgs
 from localization import localize_str
 from util import KEY_CODES, get_key_press
 
@@ -21,7 +21,7 @@ _SELECTED_MODE: int = _MODES.index('bounce')
 
 def mode_selection() -> Dict[str, str]:
     def draw():
-        util.clear()
+        util.terminal_clear()
         print(colored(f'{localize_str("select_mode_arrows")}\n', attrs=['bold', 'underline']))
         tmp = []
         for mode in _MODES:
@@ -70,7 +70,7 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
     file_path: Path = None
 
     def draw_options():
-        util.clear()
+        util.terminal_clear()
         if _MODES[_SELECTED_MODE] == 'keyframes':
             print(colored(f'{localize_str("change_options_k")}\n', attrs=['bold', 'underline']))
         else:
@@ -85,7 +85,8 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
             print(f'--{flag} = "{value}"')
 
     def draw_arg_input(flag: str):
-        util.clear()
+        util.terminal_clear()
+        util.terminal_reset()
         text = localize_str("enter_arg_value", args={'arg': flag})
         print(colored(f'{text}', attrs=['bold', 'underline']))
         if flags.get(flag):
@@ -107,7 +108,7 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
             break
 
     def draw_file_input(file_not_found: bool = False):
-        util.clear()
+        util.terminal_clear()
         if file_not_found:
             print(colored(localize_str('file_not_found'), attrs=['bold', 'underline']))
         print(colored(localize_str('enter_file_path'), attrs=['bold', 'underline']))
@@ -122,7 +123,7 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
 
 def review_options(flags: Dict[str, str], file_path: Path):
     def draw():
-        util.clear()
+        util.terminal_clear()
         print(colored(localize_str('review_settings'), attrs=['bold', 'underline']))
         print(colored(localize_str('r_s_mode'), attrs=['underline']), _MODES[_SELECTED_MODE])
         print(colored(localize_str('r_s_args'), attrs=['underline']))
@@ -136,7 +137,7 @@ def review_options(flags: Dict[str, str], file_path: Path):
             if 'bitrate' not in flags:
                 flags['bitrate'] = '1M'
             if 'threads' not in flags:
-                flags['threads'] = 2
+                flags['threads'] = os.cpu_count() + 4
             if 'tempo' not in flags:
                 flags['tempo'] = 2
             if 'angle' not in flags:
@@ -151,7 +152,7 @@ def review_options(flags: Dict[str, str], file_path: Path):
                 flags['output'] = str(file_path.parent / f'{file_path.stem}_{_MODES[_SELECTED_MODE]}.webm')
             if 'keyframes' not in flags:
                 flags['keyframes'] = None
-            return flags
+            return IArgs(flags)
 
 
 if __name__ == '__main__':
@@ -165,4 +166,4 @@ if __name__ == '__main__':
     flags, file_path = set_options(keys_to_flags)
     flags = review_options(flags, file_path)
 
-    wackypywebm.wackify([_MODES[_SELECTED_MODE]], file_path, flags, flags['output'])
+    wackypywebm.wackify([_MODES[_SELECTED_MODE]], file_path, flags, flags.output)

@@ -1,8 +1,49 @@
 import argparse
 import os
 from pathlib import Path
+from typing import Any, Dict, List, Union
 
 from localization import get_locales
+
+
+class IArgs:
+    file: Path
+    modes: List[str]
+    keyframes: Path
+    bitrate: Union[str, int]
+    tempo: float
+    angle: float
+    output: Path
+    compression: int
+    language: str
+    transparency: int
+    smoothing: int
+    threads: int
+
+    def __init__(self, args: Dict[str, Any]) -> None:
+        for key, value in args.items():
+            if key == 'keyframes' and isinstance(args[key], str):
+                args[key] = Path(value).resolve()
+                if not args[key].is_file():
+                    print('[ERROR] Incorrect path to keyframe file provided.')
+                    print_help()
+                    exit()
+            elif key in ['compression', 'transparency', 'smoothing', 'threads']:
+                args[key] = int(value)
+            elif key in ['angle', 'tempo']:
+                args[key] = float(value)
+
+        self.keyframes = args['keyframes']
+        self.bitrate = args['bitrate']
+        self.tempo = args['tempo']
+        self.angle = args['angle']
+        self.output = args['output']
+        self.compression = args['compression']
+        self.transparency = args['transparency']
+        self.smoothing = args['smoothing']
+        self.threads = args['threads']
+        self.output = args['output']
+
 
 # TODO: check if types of arguments are valid, transparency 1 or 0 thing too
 PARSER = argparse.ArgumentParser()
@@ -42,3 +83,11 @@ def get_arg_desc(dest):
         if dest == action.dest:
             return action.help
     return 'NOT_FOUND'
+
+
+def parse_args() -> IArgs:
+    return PARSER.parse_args()
+
+
+def print_help():
+    PARSER.print_help()

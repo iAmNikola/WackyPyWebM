@@ -6,7 +6,8 @@ from typing import List, Tuple
 
 from data import FrameAudioLevel
 from localization import localize_str
-from util import TMP_PATHS, get_valid_path
+from tmp_paths import TmpPaths
+from util import get_valid_path
 
 _MAX_BUFFER_SIZE = 1024 * 1000 * 8  # 8Mb
 
@@ -59,7 +60,6 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
 
 
 def split_audio(video_path: Path) -> bool:
-    tmp_audio = TMP_PATHS['tmp_audio']
     try:
         out = subprocess.run(
             [
@@ -70,7 +70,7 @@ def split_audio(video_path: Path) -> bool:
                 '-vn',
                 '-c:a',
                 'libvorbis',
-                tmp_audio,
+                TmpPaths.tmp_audio,
             ],
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
@@ -86,7 +86,7 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
     command = ['ffmpeg', '-threads', f'{threads}', '-y']
     if transparent:
         command += ['-vcodec', 'libvpx']
-    command += ['-i', video_path, TMP_PATHS['tmp_frame_files']]
+    command += ['-i', video_path, TmpPaths.tmp_frame_files]
     try:
         out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
