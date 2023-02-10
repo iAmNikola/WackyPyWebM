@@ -1,5 +1,4 @@
 import math
-import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -7,62 +6,38 @@ from typing import Any, Dict, List, Tuple
 
 from natsort import natsorted
 
+import args_util
 import ffmpeg_util
-from args_util import PARSER
 from data import BaseData, SetupData
 from localization import localize_str, set_locale
-from modes.mode_base import ModeBase
-from util import (
-    TMP_PATHS,
-    build_tmp_paths,
-    find_min_non_error_size,
-    fix_terminal,
-    get_valid_path,
-    load_modes,
-    parse_fps,
-)
+from modes.mode_base import FrameBounds, ModeBase
+from tmp_paths import TmpPaths
+from util import find_min_non_error_size, fix_terminal, get_valid_path, load_modes, parse_fps
 
 MODES: Dict[str, ModeBase] = load_modes()
-_SELECTED_MODES: List[str] = []
 
 
-def parse_arguments(args: Dict[str, Any]):
-    for key, value in args.items():
-        if key == 'keyframes' and isinstance(args[key], str):
-            args[key] = Path(value).resolve()
-            if not args[key].is_file():
-                print('ERROR')  # TODO: more verbose
-                PARSER.print_help()
-                exit()
-        elif key in ['compression', 'transparency', 'smoothing', 'threads']:
-            args[key] = int(value)
-        elif key in ['angle', 'tempo']:
-            args[key] = float(value)
-
-
-def print_config(selected_modes: List[str], args: Dict[str, Any], video_info: Tuple[Tuple[int, int], str, int, int]):
+def print_config(selected_modes: List[str], args: args_util.IArgs, video_info: Tuple[Tuple[int, int], str, int, int]):
     _, _, bitrate, _ = video_info
     print(localize_str('config_header'))
     print(localize_str('config_mode_list', args={'modes': [mode.title() for mode in selected_modes]}))
     if 'bounce' in selected_modes or 'shutter' in selected_modes:
-        print(localize_str('bounce_speed', args={'tempo': args['tempo']}))
+        print(localize_str('bounce_speed', args={'tempo': args.tempo}))
     elif 'rotate' in selected_modes:
-        print(localize_str('rotate_speed', args={'angle': args['angle']}))
+        print(localize_str('rotate_speed', args={'angle': args.angle}))
     elif 'keyframes' in selected_modes:
-        print(localize_str('keyframe_file', args={'file': args['keyframes']}))
-    if args['bitrate'] != bitrate:
+        print(localize_str('keyframe_file', args={'file': args.keyframes}))
+    if args.bitrate != bitrate:
         print(localize_str('output_bitrate', args={'bitrate': bitrate}))
     print(localize_str('config_footer'))
 
 
-def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], output_path: Path):
-    parse_arguments(args)
-
+def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, output_path: Path):
     video_info = ffmpeg_util.get_video_info(video_path)
     (width, height), fps, bitrate, num_frames = video_info
 
-    if args['bitrate'] is None:
-        args['bitrate'] = min(bitrate or 500000, 1000000)
+    if args.bitrate is None:
+        args.bitrate = min(bitrate or 500000, 1000000)
 
     delta: int = find_min_non_error_size(width, height)
     print(localize_str('info1', args={'delta': delta, 'video': video_path}))
@@ -82,17 +57,17 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
 
     print_config(selected_modes, args, video_info)
 
-    build_tmp_paths()
-    print(localize_str('creating_temp_dirs', args={'path': TMP_PATHS['tmp_folder']}))
+    TmpPaths.build_tmp_paths()
+    print(localize_str('creating_temp_dirs', args={'path': TmpPaths.tmp_folder}))
 
     print(localize_str('splitting_audio'))
     has_audio = splitting_successful = ffmpeg_util.split_audio(video_path)
 
     print(localize_str('splitting_frames'))
-    ffmpeg_util.split_frames(video_path, transparent='transparency' in selected_modes, threads=args['threads'])
+    ffmpeg_util.split_frames(video_path, transparent='transparency' in selected_modes, threads=args.threads)
 
-    setup_data = SetupData(video_path, width, height, num_frames, parse_fps(fps), args['keyframes'])
-    base_data = BaseData(width, height, num_frames, parse_fps(fps), args['tempo'], args['angle'], args['transparency'])
+    setup_data = SetupData(video_path, width, height, num_frames, parse_fps(fps), args.keyframes)
+    base_data = BaseData(width, height, num_frames, parse_fps(fps), args.tempo, args.angle, args.transparency)
 
     for mode in selected_modes:
         try:
@@ -107,36 +82,39 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
     print(localize_str('starting_conversion'))
 
     same_size_count = 0
-    frame_size_smoothing_buffer = [[width, height] for i in range(args['smoothing'])]
     fssb_i = 0
-    tmp_frame_files = TMP_PATHS['tmp_frame_files']
+    frame_size_smoothing_buffer = [[width, height] for i in range(args.smoothing)]
     tmp_webm_files = []
-    with ThreadPoolExecutor(max_workers=args['threads']) as executor:
+    with ThreadPoolExecutor(max_workers=args.threads) as executor:
         frames_processed = [False] * num_frames
-        for i, frame_path in enumerate(natsorted(TMP_PATHS['tmp_frames'].glob('*.png')), start=1):
+        for i, frame_path in enumerate(natsorted(TmpPaths.tmp_frames.glob('*.png')), start=1):
             data = base_data.extend((i - 1), frame_path)
 
-            frame_bounds = {'width': width, 'height': height}
+            frame_bounds = FrameBounds(width=width, height=height)
             for mode in selected_modes:
-                new_frame_bounds: Dict = MODES[mode].get_frame_bounds(data)
-                for key, value in new_frame_bounds.items():
-                    frame_bounds[key] = value
+                new_frame_bounds = MODES[mode].get_frame_bounds(data)
+                if new_frame_bounds.width is not None:
+                    frame_bounds.width = new_frame_bounds.width
+                if new_frame_bounds.height is not None:
+                    frame_bounds.height = new_frame_bounds.height
+                if new_frame_bounds.vf_command is not None:
+                    frame_bounds.vf_command = new_frame_bounds.vf_command
 
-            frame_bounds['width'] = max(min(frame_bounds['width'], width), delta)
-            frame_bounds['height'] = max(min(frame_bounds['height'], height), delta)
+            frame_bounds.width = max(min(frame_bounds.width, width), delta)
+            frame_bounds.height = max(min(frame_bounds.height, width), delta)
 
             if frame_size_smoothing_buffer:
                 frame_size_smoothing_buffer[fssb_i] = frame_bounds
-                fssb_i = (fssb_i + 1) % args['smoothing']
+                fssb_i = (fssb_i + 1) % args.smoothing
 
             if i == 1:
-                prev_width, prev_height = frame_bounds['width'], frame_bounds['height']
+                prev_frame = FrameBounds.copy(frame_bounds)
 
             if (
-                (abs(frame_bounds['width'] - prev_width) + abs(frame_bounds['height'] - prev_height))
-                > args['compression']
+                (abs(frame_bounds.width - prev_frame.width) + abs(frame_bounds.height - prev_frame.height))
+                > args.compression
                 or i == num_frames
-                or same_size_count > (num_frames // args['threads'])
+                or same_size_count > (num_frames // args.threads)
             ):
                 command = [
                     'ffmpeg',
@@ -146,31 +124,38 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                     '-start_number',
                     str(i - same_size_count),
                     '-i',
-                    tmp_frame_files,
+                    TmpPaths.tmp_frame_files,
                     '-frames:v',
                     str(same_size_count) if i != num_frames else '1',
                     '-c:v',
                     'vp8',
                     '-b:v',
-                    str(args['bitrate']),
+                    str(args.bitrate),
                     '-crf',
                     '10',
                     '-vf',
                 ]
-                vf_command = frame_bounds.get('vf_command')
+                vf_command = frame_bounds.vf_command
                 if vf_command is None:
                     if i != num_frames:
-                        vf_command = [f'scale={prev_width}x{prev_height}', '-aspect', f'{prev_width}:{prev_height}']
+                        vf_command = [
+                            f'scale={prev_frame.width}x{prev_frame.height}',
+                            '-aspect',
+                            f'{prev_frame.width}:{prev_frame.height}',
+                        ]
                     else:
-                        curr_width, curr_height = frame_bounds['width'], frame_bounds['height']
-                        vf_command = [f'scale={curr_width}x{curr_height}', '-aspect', f'{curr_width}:{curr_height}']
+                        vf_command = [
+                            f'scale={frame_bounds.width}x{frame_bounds.height}',
+                            '-aspect',
+                            f'{frame_bounds.width}:{frame_bounds.height}',
+                        ]
 
-                section_path = TMP_PATHS['tmp_resized_frames'] / (
+                section_path = TmpPaths.tmp_resized_frames / (
                     f'{frame_path.stem}.webm' if i != num_frames else 'end.webm'
                 )
                 command += vf_command + [
                     '-threads',
-                    str(min(args['threads'], math.ceil(same_size_count / 10))) if i != num_frames else '1',
+                    str(min(args.threads, math.ceil(same_size_count / 10))) if i != num_frames else '1',
                     '-f',
                     'webm',
                     '-auto-alt-ref',
@@ -182,17 +167,16 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
                 )
                 tmp_webm_files.append(f'file {get_valid_path(section_path)}\n')
                 same_size_count = 1
-                prev_height, prev_height = frame_bounds['width'], frame_bounds['height']
+                prev_frame = FrameBounds.copy(frame_bounds)
             else:
                 same_size_count += 1
-    print()  # exit progress bar line
-    fix_terminal()
+    fix_terminal()  # exit progress bar line
 
     end_time = time.perf_counter()
     print(localize_str('done_conversion', args={'time': f'{end_time - start_time:.2f}', 'framecount': num_frames}))
 
     print(localize_str('writing_concat_file'))
-    with open(TMP_PATHS['tmp_concat_list'], 'w') as tmp_concat_list:
+    with open(TmpPaths.tmp_concat_list, 'w') as tmp_concat_list:
         tmp_concat_list.writelines(tmp_webm_files)
 
     print(localize_str(f'concatenating{"_audio" if has_audio else ""}'))
@@ -204,30 +188,29 @@ def wackify(selected_modes: List[str], video_path: Path, args: Dict[str, Any], o
         '-safe',
         '0',
         '-i',
-        TMP_PATHS['tmp_concat_list'],
+        TmpPaths.tmp_concat_list,
     ]
     if has_audio:
-        concatenate_command += ['-i', TMP_PATHS['tmp_audio']]
+        concatenate_command += ['-i', TmpPaths.tmp_audio]
     concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', output_path]
     ffmpeg_util.exec_command(concatenate_command)
 
     print(localize_str('done_removing_temp'))
-    shutil.rmtree(TMP_PATHS['tmp_folder'])
+    TmpPaths.cleanup()
     print('Wackified:', output_path)
 
 
 if __name__ == '__main__':
-    ARGS = PARSER.parse_args()
+    ARGS = args_util.parse_args()
 
     if ARGS.language:
         set_locale(ARGS.language)
 
     if not ARGS.file.is_file():
         print(localize_str('video_file_not_found', {'file': str(ARGS.file)}))
-        PARSER.print_help()
+        args_util.print_help()
         exit()
     ARGS.file = ARGS.file.resolve()
-
     _SELECTED_MODES = [mode.lower() for mode in ARGS.modes.split("+")]
     for SELECTED_MODE in _SELECTED_MODES:
         if SELECTED_MODE not in MODES:
@@ -240,7 +223,9 @@ if __name__ == '__main__':
     else:
         ARGS.output = ARGS.file.parent / f'{ARGS.file.stem}_{"_".join(_SELECTED_MODES)}.webm'
     try:
-        wackify(_SELECTED_MODES, ARGS.file, vars(ARGS), ARGS.output)
-    except:
-        print("Something unexpected happened. Cleaning up...")
-        shutil.rmtree(TMP_PATHS['tmp_folder'])
+        wackify(_SELECTED_MODES, ARGS.file, ARGS, ARGS.output)
+    except Exception as exception:
+        print(exception)
+        print('-' * 20)
+        print('Something unexpected happened. Cleaning up...')
+        TmpPaths.cleanup()
