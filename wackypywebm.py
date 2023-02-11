@@ -201,29 +201,29 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
 
 
 if __name__ == '__main__':
-    ARGS = args_util.parse_args()
+    _args = args_util.parse_args()
 
-    if ARGS.language:
-        set_locale(ARGS.language)
+    if _args.language:
+        set_locale(_args.language)
 
-    if not ARGS.file.is_file():
-        print(localize_str('video_file_not_found', {'file': str(ARGS.file)}))
+    if not _args.file.is_file():
+        print(localize_str('video_file_not_found', {'file': str(_args.file)}))
         args_util.print_help()
         exit()
-    ARGS.file = ARGS.file.resolve()
-    _SELECTED_MODES = [mode.lower() for mode in ARGS.modes.split("+")]
-    for SELECTED_MODE in _SELECTED_MODES:
-        if SELECTED_MODE not in MODES:
-            print(f'Mode "{SELECTED_MODE}" isn\'t available.')
+    _args.file = _args.file.resolve()
+    _selected_modes = [mode.lower() for mode in _args.modes.split("+")]
+    for selected_mode in _selected_modes:
+        if selected_mode not in MODES:
+            print(f'Mode "{selected_mode}" isn\'t available.')
             exit()
 
-    if ARGS.output:
-        ARGS.output = ARGS.output.resolve()
-        ARGS.output.parent.mkdir(parents=True, exist_ok=True)
+    if _args.output:
+        _args.output = _args.output.resolve()
+        _args.output.parent.mkdir(parents=True, exist_ok=True)
     else:
-        ARGS.output = ARGS.file.parent / f'{ARGS.file.stem}_{"_".join(_SELECTED_MODES)}.webm'
+        _args.output = _args.file.parent / f'{_args.file.stem}_{"_".join(_selected_modes)}.webm'
     try:
-        wackify(_SELECTED_MODES, ARGS.file, ARGS, ARGS.output)
+        wackify(_selected_modes, _args.file, _args, _args.output)
     except Exception as exception:
         print(exception)
         print('-' * 20)
