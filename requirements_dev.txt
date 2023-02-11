@@ -1,0 +1,4 @@
+natsort==8.2.0
+termcolor==2.1.0
+black==22.10.0
+pylint==2.15.5
