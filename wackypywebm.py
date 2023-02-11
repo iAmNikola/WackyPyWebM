@@ -9,7 +9,7 @@ from natsort import natsorted
 
 import args_util
 import ffmpeg_util
-from data import BaseData, SetupData
+from data import BaseData, Data, SetupData
 from localization import localize_str, set_locale
 from modes.mode_base import FrameBounds, ModeBase
 from tmp_paths import TmpPaths
@@ -31,6 +31,29 @@ def print_config(selected_modes: List[str], args: args_util.IArgs, video_info: T
     if args.bitrate != bitrate:
         print(localize_str('output_bitrate', args={'bitrate': bitrate}))
     print(localize_str('config_footer'))
+
+
+def get_frame_bounds_from_selected_modes(
+    selected_modes: List[str],
+    data: Data,
+    frame_bounds: FrameBounds,
+    delta: int,
+    width: int,
+    height: int,
+):
+    for mode in selected_modes:
+        new_frame_bounds = MODES[mode].get_frame_bounds(data)
+        if new_frame_bounds.width is not None:
+            frame_bounds.width = new_frame_bounds.width
+        if new_frame_bounds.height is not None:
+            frame_bounds.height = new_frame_bounds.height
+        if new_frame_bounds.vf_command is not None:
+            frame_bounds.vf_command = new_frame_bounds.vf_command
+
+    frame_bounds.width = max(min(frame_bounds.width, width), delta)
+    frame_bounds.height = max(min(frame_bounds.height, height), delta)
+
+    return frame_bounds
 
 
 def apply_smoothing(
@@ -107,19 +130,9 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
             data = base_data.extend((i - 1), frame_path)
 
             frame_bounds = FrameBounds(width, height)
-            for mode in selected_modes:
-                new_frame_bounds = MODES[mode].get_frame_bounds(data)
-                if new_frame_bounds.width is not None:
-                    frame_bounds.width = new_frame_bounds.width
-                if new_frame_bounds.height is not None:
-                    frame_bounds.height = new_frame_bounds.height
-                if new_frame_bounds.vf_command is not None:
-                    frame_bounds.vf_command = new_frame_bounds.vf_command
+            get_frame_bounds_from_selected_modes(selected_modes, data, frame_bounds, delta, width, height)
 
-            frame_bounds.width = max(min(frame_bounds.width, width), delta)
-            frame_bounds.height = max(min(frame_bounds.height, width), delta)
-
-            if frame_size_smoothing_buffer:
+            if args.smoothing:
                 fssb_i = apply_smoothing(frame_size_smoothing_buffer, fssb_i, frame_bounds, args.smoothing)
 
             if i == 1:
