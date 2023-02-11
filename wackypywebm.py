@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from natsort import natsorted
 
@@ -69,6 +69,56 @@ def apply_smoothing(
     frame_bounds.height = reduce(lambda s, e: s + e[1], frame_size_smoothing_buffer, 0) // smoothing
 
     return index
+
+
+def build_ffmpeg_command(
+    frame_bounds: FrameBounds,
+    prev_frame: FrameBounds,
+    num_frames: int,
+    frame_i: int,
+    frame_path: Path,
+    same_size_count: int,
+    fps: str,
+    bitrate: Union[str, int],
+    num_threads: int,
+):
+    # fmt:off
+    command = [
+        'ffmpeg', '-y', '-r', fps,
+        '-start_number', str(frame_i - same_size_count),
+        '-i', TmpPaths.tmp_frame_files,
+        '-frames:v', str(same_size_count) if frame_i != num_frames else '1',
+        '-c:v', 'vp8', '-b:v', str(bitrate),
+        '-crf', '10', '-vf',
+    ]
+    # fmt:on
+    vf_command = frame_bounds.vf_command
+    if vf_command is None:
+        if frame_i != num_frames:
+            # fmt:off
+            vf_command = [
+                f'scale={prev_frame.width}x{prev_frame.height}',
+                '-aspect', f'{prev_frame.width}:{prev_frame.height}',
+            ]
+            # fmt:on
+        else:
+            # fmt:off
+            vf_command = [
+                f'scale={frame_bounds.width}x{frame_bounds.height}',
+                '-aspect', f'{frame_bounds.width}:{frame_bounds.height}',
+            ]
+            # fmt:on
+
+    section_path = TmpPaths.tmp_resized_frames / (f'{frame_path.stem}.webm' if frame_i != num_frames else 'end.webm')
+    # fmt:off
+    command += vf_command + [
+        '-threads',
+        str(min(num_threads, math.ceil(same_size_count / 10))) if frame_i != num_frames else '1',
+        '-f', 'webm', '-auto-alt-ref', '0',
+        section_path,
+    ]
+    # fmt:on
+    return command, section_path
 
 
 def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, output_path: Path):
@@ -144,44 +194,17 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
                 or i == num_frames
                 or same_size_count > (num_frames // args.threads)
             ):
-                # fmt:off
-                command = [
-                    'ffmpeg', '-y', '-r', fps,
-                    '-start_number', str(i - same_size_count),
-                    '-i', TmpPaths.tmp_frame_files,
-                    '-frames:v', str(same_size_count) if i != num_frames else '1',
-                    '-c:v', 'vp8', '-b:v', str(args.bitrate),
-                    '-crf', '10', '-vf',
-                ]
-                # fmt:on
-                vf_command = frame_bounds.vf_command
-                if vf_command is None:
-                    if i != num_frames:
-                        # fmt:off
-                        vf_command = [
-                            f'scale={prev_frame.width}x{prev_frame.height}',
-                            '-aspect', f'{prev_frame.width}:{prev_frame.height}',
-                        ]
-                        # fmt:on
-                    else:
-                        # fmt:off
-                        vf_command = [
-                            f'scale={frame_bounds.width}x{frame_bounds.height}',
-                            '-aspect', f'{frame_bounds.width}:{frame_bounds.height}',
-                        ]
-                        # fmt:on
-
-                section_path = TmpPaths.tmp_resized_frames / (
-                    f'{frame_path.stem}.webm' if i != num_frames else 'end.webm'
+                command, section_path = build_ffmpeg_command(
+                    frame_bounds,
+                    prev_frame,
+                    num_frames,
+                    i,
+                    frame_path,
+                    same_size_count,
+                    fps,
+                    args.bitrate,
+                    args.threads,
                 )
-                # fmt:off
-                command += vf_command + [
-                    '-threads',
-                    str(min(args.threads, math.ceil(same_size_count / 10))) if i != num_frames else '1',
-                    '-f', 'webm', '-auto-alt-ref', '0',
-                    section_path,
-                ]
-                # fmt:on
                 executor.submit(
                     ffmpeg_util.exec_command, command, extra_data=(frames_processed, i, same_size_count, num_frames)
                 )
