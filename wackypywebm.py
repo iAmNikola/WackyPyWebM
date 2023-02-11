@@ -1,8 +1,9 @@
 import math
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import reduce
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 from natsort import natsorted
 
@@ -30,6 +31,21 @@ def print_config(selected_modes: List[str], args: args_util.IArgs, video_info: T
     if args.bitrate != bitrate:
         print(localize_str('output_bitrate', args={'bitrate': bitrate}))
     print(localize_str('config_footer'))
+
+
+def apply_smoothing(
+    frame_size_smoothing_buffer: List[Tuple[int, int]],
+    index: int,
+    frame_bounds: FrameBounds,
+    smoothing: int,
+):
+    frame_size_smoothing_buffer[index] = [frame_bounds.width, frame_bounds.height]
+    index = (index + 1) % smoothing
+
+    frame_bounds.width = reduce(lambda s, e: s + e[0], frame_size_smoothing_buffer, 0) // smoothing
+    frame_bounds.height = reduce(lambda s, e: s + e[1], frame_size_smoothing_buffer, 0) // smoothing
+
+    return index
 
 
 def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, output_path: Path):
@@ -83,14 +99,14 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
 
     same_size_count = 0
     fssb_i = 0
-    frame_size_smoothing_buffer = [[width, height] for i in range(args.smoothing)]
+    frame_size_smoothing_buffer = [(width, height) for _ in range(args.smoothing)]
     tmp_webm_files = []
     with ThreadPoolExecutor(max_workers=args.threads) as executor:
         frames_processed = [False] * num_frames
         for i, frame_path in enumerate(natsorted(TmpPaths.tmp_frames.glob('*.png')), start=1):
             data = base_data.extend((i - 1), frame_path)
 
-            frame_bounds = FrameBounds(width=width, height=height)
+            frame_bounds = FrameBounds(width, height)
             for mode in selected_modes:
                 new_frame_bounds = MODES[mode].get_frame_bounds(data)
                 if new_frame_bounds.width is not None:
@@ -104,8 +120,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
             frame_bounds.height = max(min(frame_bounds.height, width), delta)
 
             if frame_size_smoothing_buffer:
-                frame_size_smoothing_buffer[fssb_i] = frame_bounds
-                fssb_i = (fssb_i + 1) % args.smoothing
+                fssb_i = apply_smoothing(frame_size_smoothing_buffer, fssb_i, frame_bounds, args.smoothing)
 
             if i == 1:
                 prev_frame = FrameBounds.copy(frame_bounds)
