@@ -131,52 +131,44 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
                 or i == num_frames
                 or same_size_count > (num_frames // args.threads)
             ):
+                # fmt:off
                 command = [
-                    'ffmpeg',
-                    '-y',
-                    '-r',
-                    fps,
-                    '-start_number',
-                    str(i - same_size_count),
-                    '-i',
-                    TmpPaths.tmp_frame_files,
-                    '-frames:v',
-                    str(same_size_count) if i != num_frames else '1',
-                    '-c:v',
-                    'vp8',
-                    '-b:v',
-                    str(args.bitrate),
-                    '-crf',
-                    '10',
-                    '-vf',
+                    'ffmpeg', '-y', '-r', fps,
+                    '-start_number', str(i - same_size_count),
+                    '-i', TmpPaths.tmp_frame_files,
+                    '-frames:v', str(same_size_count) if i != num_frames else '1',
+                    '-c:v', 'vp8', '-b:v', str(args.bitrate),
+                    '-crf', '10', '-vf',
                 ]
+                # fmt:on
                 vf_command = frame_bounds.vf_command
                 if vf_command is None:
                     if i != num_frames:
+                        # fmt:off
                         vf_command = [
                             f'scale={prev_frame.width}x{prev_frame.height}',
-                            '-aspect',
-                            f'{prev_frame.width}:{prev_frame.height}',
+                            '-aspect', f'{prev_frame.width}:{prev_frame.height}',
                         ]
+                        # fmt:on
                     else:
+                        # fmt:off
                         vf_command = [
                             f'scale={frame_bounds.width}x{frame_bounds.height}',
-                            '-aspect',
-                            f'{frame_bounds.width}:{frame_bounds.height}',
+                            '-aspect', f'{frame_bounds.width}:{frame_bounds.height}',
                         ]
+                        # fmt:on
 
                 section_path = TmpPaths.tmp_resized_frames / (
                     f'{frame_path.stem}.webm' if i != num_frames else 'end.webm'
                 )
+                # fmt:off
                 command += vf_command + [
                     '-threads',
                     str(min(args.threads, math.ceil(same_size_count / 10))) if i != num_frames else '1',
-                    '-f',
-                    'webm',
-                    '-auto-alt-ref',
-                    '0',
+                    '-f', 'webm', '-auto-alt-ref', '0',
                     section_path,
                 ]
+                # fmt:on
                 executor.submit(
                     ffmpeg_util.exec_command, command, extra_data=(frames_processed, i, same_size_count, num_frames)
                 )
@@ -195,16 +187,12 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
         tmp_concat_list.writelines(tmp_webm_files)
 
     print(localize_str(f'concatenating{"_audio" if has_audio else ""}'))
+    # fmt:off
     concatenate_command = [
-        'ffmpeg',
-        '-y',
-        '-f',
-        'concat',
-        '-safe',
-        '0',
-        '-i',
-        TmpPaths.tmp_concat_list,
+        'ffmpeg', '-y', '-f', 'concat',
+        '-safe', '0', '-i', TmpPaths.tmp_concat_list,
     ]
+    # fmt:on
     if has_audio:
         concatenate_command += ['-i', TmpPaths.tmp_audio]
     concatenate_command += ['-c', 'copy', '-auto-alt-ref', '0', output_path]
