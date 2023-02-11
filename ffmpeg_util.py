@@ -31,19 +31,15 @@ def ffmpeg_error_handler(stderr: bytes):
 def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
     try:
         video_data = subprocess.run(
+            # fmt:off
             [
-                'ffprobe',
-                '-v',
-                'error',
-                '-select_streams',
-                'v',
-                '-of',
-                'json',
-                '-count_frames',
-                '-show_entries',
+                'ffprobe', '-v', 'error',
+                '-select_streams', 'v', '-of', 'json',
+                '-count_frames', '-show_entries',
                 'stream=r_frame_rate,width,height,nb_read_frames,bit_rate',
                 video_path,
             ],
+            # fmt:on
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
             check=True,
@@ -62,16 +58,12 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
 def split_audio(video_path: Path) -> bool:
     try:
         out = subprocess.run(
+            # fmt:off
             [
-                'ffmpeg',
-                '-y',
-                '-i',
-                video_path,
-                '-vn',
-                '-c:a',
-                'libvorbis',
-                TmpPaths.tmp_audio,
+                'ffmpeg', '-y', '-i', video_path,
+                '-vn', '-c:a', 'libvorbis', TmpPaths.tmp_audio,
             ],
+            # fmt:on
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
             check=True,
@@ -120,17 +112,14 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
 def get_frames_audio_levels(video_path: Path):
     try:
         frames_dbs = subprocess.run(
+            # fmt:off
             [
-                'ffprobe',
-                '-f',
-                'lavfi',
-                '-i',
-                f"amovie={get_valid_path(video_path, filter=True)},astats=metadata=1:reset=1",
-                '-show_entries',
-                'frame=pkt_pts_time:frame_tags=lavfi.astats.Overall.RMS_level',
-                '-of',
-                'json',
+                'ffprobe', '-f', 'lavfi',
+                '-i', f"amovie={get_valid_path(video_path, filter=True)},astats=metadata=1:reset=1",
+                '-show_entries', 'frame=pkt_pts_time:frame_tags=lavfi.astats.Overall.RMS_level',
+                '-of', 'json',
             ],
+            # fmt:on
             bufsize=_MAX_BUFFER_SIZE,
             capture_output=True,
             check=True,
