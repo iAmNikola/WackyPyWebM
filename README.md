@@ -49,6 +49,8 @@ WackyPyWebM is a tool that allows you to create **WebM** videos with changing as
 
 This is a **Python** implementation of [OIRNOIR's WackyWebM](https://github.com/OIRNOIR/WackyWebM) in hopes of making the tool more accessible.
 
+The current implementation is 5-10% faster then its javascript counterpart.
+
 ## Getting Started
 
 ### Prerequisites
@@ -123,7 +125,7 @@ If you want full control, console commands are the way to go about using WackyPy
 - `shrink`: The video shrinks vertically from full height to just one pixel over its entire duration.
 - `audiobounce`: The video's height changes relative to the current audio level compared to the highest within the video.
 - `audioshutter`: The video's width changes relative to the current audio level compared to the highest within the video.
-- `keyframes`: The video's height and width change based on a number of keyframes outlined in the file given as an argument. The format for said file is Described [Here](docs/keyframes.md).
+- `keyframes`: The video's height and width change based on a number of keyframes outlined in the file given as an argument. The format for said file is Described [Here](docs/KEYFRAMES.md).
 
 ## Support
 
