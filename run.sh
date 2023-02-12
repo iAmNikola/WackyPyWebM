@@ -17,7 +17,7 @@ if ! command -v ffprobe &>/dev/null; then echo "FFprobe not found, exiting..." &
 if ! command -v python &>/dev/null; then echo "Python not found, exiting..." && exit 1; fi
 echo "No issues found!"
 
-# TODO: Write dependency check for python packages
+pip install -r requirements.txt &>/dev/null
 
 read -p "Enter the language [en_us]: " lang
 lang=${lang:-en_us}
