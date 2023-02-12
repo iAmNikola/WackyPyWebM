@@ -66,7 +66,7 @@ pip install -r requirements_no_term.txt
 ``` 
 You can also install `requirements.txt` instead if you plan on running Terminal UI in the future
 
-> Note: Using a virtual environment is highly recommended.
+**Note**: Using a virtual environment is highly recommended.
 
 ## Usage
 
@@ -113,7 +113,7 @@ If you want full control, console commands are the way to go about using WackyPy
   python wackypywebm.py path/to/video.mp4 keyframes --keyframes path/to/keyframes.txt
   ```
 
-> Note: Run python wackypywebm.py --help for a full list of options.
+**Note**: Run python wackypywebm.py --help for a full list of options.
 
 ## Modes
 
