@@ -256,6 +256,7 @@ if __name__ == '__main__':
         _args.output.parent.mkdir(parents=True, exist_ok=True)
     else:
         _args.output = _args.file.parent / f'{_args.file.stem}_{"_".join(_selected_modes)}.webm'
+
     try:
         wackify(_selected_modes, _args.file, _args, _args.output)
     except Exception as exception:
