@@ -2,12 +2,12 @@ import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Callable, Union
+from typing import Callable, Dict, List, Union
 
-import ffmpeg_util
-from data import Data, FrameAudioLevel, SetupData
+from data import Data, SetupData
+import localization
 from localization import localize_str
-from modes.mode_base import ModeBase, FrameBounds
+from modes.mode_base import FrameBounds, ModeBase
 
 
 class NumberOfFieldsInvalidException(Exception):
@@ -67,7 +67,7 @@ class Mode(ModeBase):
 
     @classmethod
     def setup(cls, setup_data: SetupData):
-        print(localize_str('parsing_keyframes', args={'file': setup_data.keyframe_file}))
+        localization.print('parsing_keyframes', args={'file': setup_data.keyframe_file})
         cls.interpolation(None, None, setup=True)
         cls.parse_keyframe_file(setup_data.keyframe_file, setup_data.fps, setup_data.width, setup_data.height)
 
@@ -76,7 +76,7 @@ class Mode(ModeBase):
         incremented = False
         while cls.kf_index != len(cls.keyframes) - 1 and data.frame_index >= cls.keyframes[cls.kf_index + 1].time:
             if incremented:
-                print(localize_str('excess_keyframes', args={'time': cls.keyframes[cls.kf_index + 1].time}))
+                localization.print('excess_keyframes', args={'time': cls.keyframes[cls.kf_index + 1].time})
             cls.kf_index += 1
             incremented = True
 
@@ -128,7 +128,7 @@ class Mode(ModeBase):
             if len(time) == 2:
                 parsed_time += time[1]
                 if time[1] >= fps:
-                    print(localize_str('large_frame_specifier', args={'line': line_i}))
+                    localization.print('large_frame_specifier', args={'line': line_i})
 
             interpolation = 'linear'  # default
             if len(data) == 4 and cls.is_interp_mode_valid(data[3]):

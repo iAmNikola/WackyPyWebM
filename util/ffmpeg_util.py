@@ -1,13 +1,14 @@
 import json
+import math
+import os
 import re
 import subprocess
 from pathlib import Path
 from typing import List, Tuple
 
-from data import FrameAudioLevel
-from localization import localize_str
-from tmp_paths import TmpPaths
-from util import get_valid_path
+import localization
+from modes.mode_base import FrameAudioLevel
+from util.tmp_paths import TmpPaths
 
 _MAX_BUFFER_SIZE = 1024 * 1000 * 8  # 8Mb
 
@@ -26,6 +27,22 @@ def ffmpeg_error_handler(stderr: bytes):
     else:
         error_message = stderr.decode()
     raise FFMPEGExcption(error_message)
+
+
+def parse_fps(fps: str) -> float:
+    if '/' in fps:
+        fps = fps.split('/')
+        return int(fps[0]) / int(fps[1])
+    else:
+        return float(fps)
+
+
+def get_valid_path(path: Path, filter=False) -> str:
+    if os.name == 'nt':
+        path = str(path).replace('\\', '/\\')
+        if filter:
+            path = path.replace(':', r'\\:')
+    return path
 
 
 def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
@@ -69,7 +86,7 @@ def split_audio(video_path: Path) -> bool:
             check=True,
         )
     except subprocess.CalledProcessError:
-        print(localize_str('no_audio'))
+        localization.print('no_audio')
         return False
     return True
 
@@ -94,17 +111,15 @@ def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int
         frames_processed, index, same_size_count, num_frames = extra_data
         for i in range(index - same_size_count - 1, index - 1):
             frames_processed[i] = True
-        print(
-            localize_str(
-                'convert_progress',
-                args={
-                    'framecount': f'{same_size_count:>5}',
-                    'startframe': index - same_size_count,
-                    'endframe': index,
-                    'batch_size': num_frames,
-                    'percent': f'{100*frames_processed.count(True) / num_frames:.1f}',
-                },
-            ),
+        localization.print(
+            'convert_progress',
+            args={
+                'framecount': f'{same_size_count:>5}',
+                'startframe': index - same_size_count,
+                'endframe': index,
+                'batch_size': num_frames,
+                'percent': f'{100*frames_processed.count(True) / num_frames:.1f}',
+            },
             end='\r',
         )
 
@@ -115,7 +130,7 @@ def get_frames_audio_levels(video_path: Path):
             # fmt:off
             [
                 'ffprobe', '-f', 'lavfi',
-                '-i', f"amovie={get_valid_path(video_path, filter=True)},astats=metadata=1:reset=1",
+                '-i', f'amovie={get_valid_path(video_path, filter=True)},astats=metadata=1:reset=1',
                 '-show_entries', 'frame=pkt_pts_time:frame_tags=lavfi.astats.Overall.RMS_level',
                 '-of', 'json',
             ],
@@ -143,7 +158,7 @@ def get_frames_audio_levels(video_path: Path):
         dbs_sum += fal.dbs if fal.dbs != float('-inf') else 0
 
     if highest == float('-inf'):
-        print(localize_str('no_audio'))
+        localization.print('no_audio')
 
     average = dbs_sum / len(frames_audio_levels)
     deviation = abs((highest - average) / 2)
@@ -154,3 +169,45 @@ def get_frames_audio_levels(video_path: Path):
         fal.percent_max = (0.5 + v) if clamped > average else (0.5 - v)
 
     return frames_audio_levels
+
+
+def find_min_non_error_size(width, height):
+    def av_reduce_succeeds(num, den):
+        MAX = 255
+        a0 = [0, 1]
+        a1 = [1, 0]
+        gcd = math.gcd(num, den)
+
+        if gcd > 1:
+            num //= gcd
+            den //= gcd
+
+        if num <= MAX and den <= MAX:
+            a1 = [num, den]
+            den = 0
+
+        while den:
+            x = num // den
+            next_den = num - den * x
+            a2n = x * a1[0] + a0[0]
+            a2d = x * a1[1] + a0[1]
+
+            if a2n > MAX or a2d > MAX:
+                if a1[0]:
+                    x = (MAX - a0[0]) // a1[0]
+                if a1[1]:
+                    x = min(x, (MAX - a0[1]) // a1[1])
+                if (den * (2 * x * a1[1] + a0[1])) > (num * a1[1]):
+                    a1 = [x * a1[0] + a0[0], x * a1[1] + a0[1]]
+                break
+
+            a0 = a1
+            a1 = [a2n, a2d]
+            num = den
+            den = next_den
+
+        return math.gcd(a1[0], a1[1]) <= 1 and (a1[0] <= MAX and a1[1] <= MAX) and a1[0] > 0 and a1[1] > 0
+
+    for i in range(1, max(width, height)):
+        if av_reduce_succeeds(i, height) and av_reduce_succeeds(width, i):
+            return i

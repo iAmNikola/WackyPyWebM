@@ -1,13 +1,13 @@
 import math
 from typing import List
 
-import ffmpeg_util
-from data import Data, FrameAudioLevel, SetupData
-from modes.mode_base import FrameBounds, ModeBase
+import util.ffmpeg_util as ffmpeg_util
+from data import Data, SetupData
+from modes.mode_base import FrameAudioLevel, FrameBounds, ModeBase
 
 
 class Mode(ModeBase):
-    frames_audio_levels: List[FrameAudioLevel] = True  # set to True to fail in setup if audio missing
+    frames_audio_levels: List[FrameAudioLevel] = []
 
     @classmethod
     def setup(cls, setup_data: SetupData):

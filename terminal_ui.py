@@ -6,45 +6,44 @@ from typing import Dict, List, Tuple
 from termcolor import colored
 
 import localization
-import util
 import wackypywebm
-from args_util import get_arg_desc, IArgs
-from localization import localize_str
-from util import KEY_CODES, get_key_press
+from util.args_util import IArgs, get_arg_desc
+from util.terminal_util import KeyCodes, get_key_press, terminal_clear
 
 if os.name == 'nt':
     os.system('color')
 
-_MODES: List = list(wackypywebm.MODES.keys())
-_SELECTED_MODE: int = _MODES.index('bounce')
+
+class TerminalUI:
+    modes: List[str] = list(wackypywebm.MODES.keys())
+    selected_mode: int = list(wackypywebm.MODES.keys()).index('bounce')
 
 
 def mode_selection() -> Dict[str, str]:
     def draw():
-        util.terminal_clear()
-        print(colored(f'{localize_str("select_mode_arrows")}\n', attrs=['bold', 'underline']))
+        terminal_clear()
+        localization.colored_print('select_mode_arrows', None, ['bold', 'underline'], '\n')
         tmp = []
-        for mode in _MODES:
-            if _MODES[_SELECTED_MODE] == mode:
+        for mode in TerminalUI.modes:
+            if TerminalUI.modes[TerminalUI.selected_mode] == mode:
                 tmp.append(colored(mode, attrs=['underline']))
             else:
                 tmp.append(mode)
         print('    '.join(tmp))
 
     def set_selected_mode(key) -> bool:
-        global _SELECTED_MODE
-        if key == KEY_CODES['ENTER']:
+        if key == KeyCodes.enter:
             return True
-        if key in KEY_CODES['ARROW_LEFT']:
-            if _SELECTED_MODE == 0:
-                _SELECTED_MODE = len(_MODES) - 1
+        if key in KeyCodes.arrow_left:
+            if TerminalUI.selected_mode == 0:
+                TerminalUI.selected_mode = len(TerminalUI.modes) - 1
             else:
-                _SELECTED_MODE -= 1
-        if key in KEY_CODES['ARROW_RIGHT']:
-            if _SELECTED_MODE == (len(_MODES) - 1):
-                _SELECTED_MODE = 0
+                TerminalUI.selected_mode -= 1
+        if key in KeyCodes.arrow_right:
+            if TerminalUI.selected_mode == (len(TerminalUI.modes) - 1):
+                TerminalUI.selected_mode = 0
             else:
-                _SELECTED_MODE += 1
+                TerminalUI.selected_mode += 1
         return False
 
     keys_to_flags: Dict[str, str] = {
@@ -58,9 +57,9 @@ def mode_selection() -> Dict[str, str]:
     while True:
         draw()
         if set_selected_mode(get_key_press()):
-            if _MODES[_SELECTED_MODE] in ['keyframes', 'angle', 'transparency']:
-                keys_to_flags['x'] = f'{_MODES[_SELECTED_MODE]}'
-            elif _MODES[_SELECTED_MODE] in ['bounce', 'shutter']:
+            if TerminalUI.modes[TerminalUI.selected_mode] in ['keyframes', 'angle', 'transparency']:
+                keys_to_flags['x'] = f'{TerminalUI.modes[TerminalUI.selected_mode]}'
+            elif TerminalUI.modes[TerminalUI.selected_mode] in ['bounce', 'shutter']:
                 keys_to_flags['x'] = 'tempo'
             return keys_to_flags
 
@@ -70,30 +69,30 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
     file_path: Path = None
 
     def draw_options():
-        util.terminal_clear()
-        if _MODES[_SELECTED_MODE] == 'keyframes':
-            print(colored(f'{localize_str("change_options_k")}\n', attrs=['bold', 'underline']))
+        terminal_clear()
+        if TerminalUI.modes[TerminalUI.selected_mode] == 'keyframes':
+            localization.colored_print('change_options_k', attrs=['bold', 'underline'])
         else:
-            print(colored(f'{localize_str("change_options")}\n', attrs=['bold', 'underline']))
+            localization.colored_print('change_options', attrs=['bold', 'underline'])
+        print()
 
         for key, flag in keys_to_flags.items():
             print(f'{key}: {get_arg_desc(flag)}')
 
         if flags:
-            print(colored(f'\n{localize_str("current_arg_values")}', attrs=['bold', 'underline']))
+            print()
+            localization.colored_print('current_arg_values', attrs=['bold', 'underline'])
         for flag, value in flags.items():
             print(f'--{flag} = "{value}"')
 
     def draw_arg_input(flag: str):
-        util.terminal_clear()
-        util.terminal_reset()
-        text = localize_str("enter_arg_value", args={'arg': flag})
-        print(colored(f'{text}', attrs=['bold', 'underline']))
+        terminal_clear()
+        localization.colored_print('enter_arg_value', args={'arg': flag}, attrs=['bold', 'underline'])
         if flags.get(flag):
             print(f'Current value: "{flags[flag]}"\n')
 
     def configure_options(key: str):
-        if key == KEY_CODES['ENTER']:
+        if key == KeyCodes.enter:
             return True
         if key.lower() not in keys_to_flags:
             return False
@@ -108,10 +107,10 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
             break
 
     def draw_file_input(file_not_found: bool = False):
-        util.terminal_clear()
+        terminal_clear()
         if file_not_found:
-            print(colored(localize_str('file_not_found'), attrs=['bold', 'underline']))
-        print(colored(localize_str('enter_file_path'), attrs=['bold', 'underline']))
+            localization.colored_print('file_not_found', attrs=['bold', 'underline'])
+        localization.colored_print('enter_file_path', attrs=['bold', 'underline'])
 
     draw_file_input()
     while True:
@@ -123,17 +122,17 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
 
 def review_options(flags: Dict[str, str], file_path: Path):
     def draw():
-        util.terminal_clear()
-        print(colored(localize_str('review_settings'), attrs=['bold', 'underline']))
-        print(colored(localize_str('r_s_mode'), attrs=['underline']), _MODES[_SELECTED_MODE])
-        print(colored(localize_str('r_s_args'), attrs=['underline']))
+        terminal_clear()
+        localization.colored_print('review_settings', attrs=['bold', 'underline'])
+        localization.colored_print('r_s_mode', None, ['underline'], TerminalUI.modes[TerminalUI.selected_mode])
+        localization.colored_print('r_s_args', attrs=['underline'])
         for key, value in flags.items():
             print(f'    {key}: "{value}"')
-        print(colored(localize_str('r_s_file'), attrs=['underline']), file_path)
+        localization.colored_print('r_s_file', None, ['underline'], file_path)
 
     draw()
     while True:
-        if get_key_press() == KEY_CODES['ENTER']:
+        if get_key_press() == KeyCodes.enter:
             if 'bitrate' not in flags:
                 flags['bitrate'] = '1M'
             if 'threads' not in flags:
@@ -149,7 +148,9 @@ def review_options(flags: Dict[str, str], file_path: Path):
             if 'smoothing' not in flags:
                 flags['smoothing'] = 0
             if 'output' not in flags:
-                flags['output'] = str(file_path.parent / f'{file_path.stem}_{_MODES[_SELECTED_MODE]}.webm')
+                flags['output'] = str(
+                    file_path.parent / f'{file_path.stem}_{TerminalUI.modes[TerminalUI.selected_mode]}.webm'
+                )
             if 'keyframes' not in flags:
                 flags['keyframes'] = None
             return IArgs(flags)
@@ -166,4 +167,4 @@ if __name__ == '__main__':
     flags, file_path = set_options(keys_to_flags)
     flags = review_options(flags, file_path)
 
-    wackypywebm.wackify([_MODES[_SELECTED_MODE]], file_path, flags, flags.output)
+    wackypywebm.wackify([TerminalUI.modes[TerminalUI.selected_mode]], file_path, flags, flags.output)

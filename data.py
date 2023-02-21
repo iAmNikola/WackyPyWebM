@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Union
 
 
 @dataclass
@@ -23,31 +22,15 @@ class BaseData:
     angle: float
     transparency: int
 
-    def extend(self, frame_index: int, frame_path: Path):
-        return Data(
-            self.width,
-            self.height,
-            self.num_frames,
-            self.fps,
-            self.tempo,
-            self.angle,
-            self.transparency,
-            frame_index,
-            frame_path,
-        )
 
-
-@dataclass
 class Data(BaseData):
-    frame_index: int
-    frame_path: Path
-
-
-@dataclass
-class FrameAudioLevel:
-    dbs: float
-    percent_max: float
-
-    @classmethod
-    def from_dict(cls, frame_dbs: Dict[str, Dict[str, Union[str, float]]]) -> 'FrameAudioLevel':
-        return cls(float(frame_dbs['tags']['lavfi.astats.Overall.RMS_level']), None)
+    def __init__(self, base_data: BaseData, frame_index: int, frame_path: Path):
+        self.width = base_data.width
+        self.height = base_data.height
+        self.num_frames = base_data.num_frames
+        self.fps = base_data.fps
+        self.tempo = base_data.tempo
+        self.angle = base_data.angle
+        self.transparency = base_data.transparency
+        self.frame_index = frame_index
+        self.frame_path = frame_path

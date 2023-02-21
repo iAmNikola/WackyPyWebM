@@ -1,31 +1,44 @@
 import json
 from pathlib import Path
-from typing import List
-from typing import Dict
+from typing import Dict, List, Union
 
-_CURRENT_LOCALE: Dict[str, str] = {}
-_LOCALIZATION_FOLDER = Path(__file__).resolve().parent / 'localization'
+
+class Localization:
+    current_locale: Dict[str, str] = {}
+    folder = Path(__file__).resolve().parent / 'localization'
 
 
 def get_locales() -> List[str]:
-    locales = [localization_file.stem for localization_file in _LOCALIZATION_FOLDER.glob('*.json')]
+    locales = [localization_file.stem for localization_file in Localization.folder.glob('*.json')]
     return locales
 
 
 def set_locale(lang) -> None:
-    global _CURRENT_LOCALE
-    with open(_LOCALIZATION_FOLDER / f'{lang}.json') as f:
-        _CURRENT_LOCALE = json.load(f)
+    with open(Localization.folder / f'{lang}.json') as f:
+        Localization.current_locale = json.load(f)
 
 
-def localize_str(key: str, args: Dict = None) -> str:
-    if key in _CURRENT_LOCALE:
-        raw_text = _CURRENT_LOCALE[key]
+def localize_str(key: str, args: Union[Dict[str, str], None]) -> str:
+    if key in Localization.current_locale:
+        raw_text = Localization.current_locale[key]
     else:
-        return _CURRENT_LOCALE['no_translation']
+        return Localization.current_locale['no_translation']
 
     if args:
         for arg, value in args.items():
             raw_text = raw_text.replace('{' + arg + '}', str(value))
 
     return raw_text
+
+
+_print = print
+
+
+def print(key: str, args: Dict[str, str] = None, end='\n', *other):
+    _print(localize_str(key, args), *other, end=end)
+
+
+def colored_print(key, args: Dict[str, str] = None, attrs: List[str] = None, *other):
+    from termcolor import colored
+
+    _print(colored(localize_str(key, args), attrs=attrs), *other)

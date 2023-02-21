@@ -9,11 +9,11 @@ from localization import get_locales
 class IArgs:
     file: Path
     modes: List[str]
-    keyframes: Path
-    bitrate: Union[str, int]
+    keyframes: Union[Path, None]
+    bitrate: Union[str, int, None]
     tempo: float
     angle: float
-    output: Path
+    output: Union[Path, None]
     compression: int
     language: str
     transparency: int
@@ -45,7 +45,6 @@ class IArgs:
         self.output = args['output']
 
 
-# TODO: check if types of arguments are valid, transparency 1 or 0 thing too
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument('file', type=Path, help='Path to file you want to be wacky.')
 PARSER.add_argument('modes', type=str, default='bounce', nargs='?', help='Modes to apply to file.')
@@ -64,18 +63,15 @@ PARSER.add_argument(
     '-c', '--compression', type=int, default=0, help='Sets compression level. Higher values means more compression.'
 )
 PARSER.add_argument('-l', '--language', type=str, default='en_us', choices=get_locales(), help='Sets language.')
-PARSER.add_argument(
-    '--transparency',
-    type=int,
-    choices=[0, 1],
-    default=1,
-    help='Sets the transparency threshold for use with the "Transparency" mode.',
-)
+# PARSER.add_argument(
+#     '--transparency',
+#     type=int,
+#     choices=[0, 1],
+#     default=1,
+#     help='Sets the transparency threshold for use with the "Transparency" mode.',
+# )
 PARSER.add_argument('-s', '--smoothing', type=int, default=0, help='Sets the level of smoothing to apply.')
 PARSER.add_argument('--threads', type=int, default=os.cpu_count() + 4, help='Sets maximum number of threads to use.')
-
-# TODO: I will see if I implement this functionality
-PARSER.add_argument('--no-update-check', action='store_true', help='Disables the automatic update check.')
 
 
 def get_arg_desc(dest):
