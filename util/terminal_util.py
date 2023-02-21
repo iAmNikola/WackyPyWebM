@@ -1,16 +1,4 @@
-import math
 import os
-from pathlib import Path
-
-
-def terminal_clear():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-
-def fix_terminal():
-    print()
-    os.system('' if os.name == 'nt' else 'stty echo')
-
 
 ####################################################################
 ##  Bless Markus Hirsimäki: https://stackoverflow.com/a/72035449  ##
@@ -74,6 +62,7 @@ if os.name == "nt":
     read_one_wdchar = _read_one_wide_char_win
     char_can_escape = _char_can_be_escape_win
     dump_key_buffer = _dump_keyboard_buff_win
+
 if os.name == "posix":
     import sys
     import termios
@@ -117,87 +106,29 @@ def getch_but_it_actually_works() -> str:
 ## End of Markus' code ##
 #########################
 
-# Common keys codes
-KEY_CODES = {
-    'CTRL+[CZ]': ['\x1a', '\x03'],
-    'ARROW_UP': ['\x1b[A', '\x00H'],
-    'ARROW_DOWN': ['\x1b[B', '\x00P'],
-    'ARROW_RIGHT': ['\x1b[C', '\x00M'],
-    'ARROW_LEFT': ['\x1b[D', '\x00K'],
-    'ENTER': '\r',
-}
+
+def terminal_clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
+def fix_terminal():
+    print()
+    os.system('' if os.name == 'nt' else 'stty echo')
+
+
+class KeyCodes:
+    quit = ['\x1a', '\x03']
+    arrow_up = ['\x1b[A', '\x00H']
+    arrow_down = ['\x1b[B', '\x00P']
+    arrow_right = ['\x1b[C', '\x00M']
+    arrow_left = ['\x1b[D', '\x00K']
+    enter = '\r'
 
 
 def get_key_press():
     key = getch_but_it_actually_works()
-    if key in KEY_CODES['CTRL+[CZ]']:
+    if key in KeyCodes.quit:
         raise KeyboardInterrupt
     if key.upper() == 'Q':
         exit(0)
     return key
-
-
-def find_min_non_error_size(width, height):
-    def av_reduce_succeeds(num, den):
-        MAX = 255
-        a0 = [0, 1]
-        a1 = [1, 0]
-        gcd = math.gcd(num, den)
-
-        if gcd > 1:
-            num //= gcd
-            den //= gcd
-
-        if num <= MAX and den <= MAX:
-            a1 = [num, den]
-            den = 0
-
-        while den:
-            x = num // den
-            next_den = num - den * x
-            a2n = x * a1[0] + a0[0]
-            a2d = x * a1[1] + a0[1]
-
-            if a2n > MAX or a2d > MAX:
-                if a1[0]:
-                    x = (MAX - a0[0]) // a1[0]
-                if a1[1]:
-                    x = min(x, (MAX - a0[1]) // a1[1])
-                if (den * (2 * x * a1[1] + a0[1])) > (num * a1[1]):
-                    a1 = [x * a1[0] + a0[0], x * a1[1] + a0[1]]
-                break
-
-            a0 = a1
-            a1 = [a2n, a2d]
-            num = den
-            den = next_den
-
-        return math.gcd(a1[0], a1[1]) <= 1 and (a1[0] <= MAX and a1[1] <= MAX) and a1[0] > 0 and a1[1] > 0
-
-    for i in range(1, max(width, height)):
-        if av_reduce_succeeds(i, height) and av_reduce_succeeds(width, i):
-            return i
-
-
-def load_modes():
-    modes = {}
-    for mode in (Path(__file__).resolve().parent / 'modes').glob('*.py'):
-        if mode.stem != 'mode_base':
-            modes[mode.stem] = __import__(f'modes.{mode.stem}', fromlist=['Mode']).Mode
-    return modes
-
-
-def parse_fps(fps: str) -> float:
-    if '/' in fps:
-        fps = fps.split('/')
-        return int(fps[0]) / int(fps[1])
-    else:
-        return float(fps)
-
-
-def get_valid_path(path: Path, filter=False) -> str:
-    if os.name == 'nt':
-        path = str(path).replace('\\', '/\\')
-        if filter:
-            path = path.replace(':', r'\\:')
-    return path

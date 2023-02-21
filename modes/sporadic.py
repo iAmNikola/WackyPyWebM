@@ -1,7 +1,8 @@
 import math
 import random
+
 from data import Data
-from modes.mode_base import ModeBase, FrameBounds
+from modes.mode_base import FrameBounds, ModeBase
 
 
 class Mode(ModeBase):

@@ -12,7 +12,7 @@ class TmpPaths:
 
     @classmethod
     def build_tmp_paths(cls):
-        tmp_folder = Path(__file__).resolve().parent / 'tempFiles'
+        tmp_folder = Path(__file__).resolve().parents[1] / 'tempFiles'
 
         tmp_frames = tmp_folder / 'tempFrames'
         tmp_frames.mkdir(parents=True, exist_ok=True)
@@ -33,4 +33,3 @@ class TmpPaths:
     @classmethod
     def cleanup(cls):
         shutil.rmtree(TmpPaths.tmp_folder)
-
