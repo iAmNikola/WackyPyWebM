@@ -3,8 +3,9 @@ import math
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import localization
 from modes.mode_base import FrameAudioLevel
@@ -31,21 +32,21 @@ def ffmpeg_error_handler(stderr: bytes):
 
 def parse_fps(fps: str) -> float:
     if '/' in fps:
-        fps = fps.split('/')
-        return int(fps[0]) / int(fps[1])
+        parts = fps.split('/')
+        return int(parts[0]) / int(parts[1])
     else:
         return float(fps)
 
 
-def get_valid_path(path: Path, filter=False) -> str:
+def get_valid_path(path: Path, _filter=False) -> str:
     if os.name == 'nt':
         path = str(path).replace('\\', '/\\')
-        if filter:
+        if _filter:
             path = path.replace(':', r'\\:')
-    return path
+    return str(path)
 
 
-def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
+def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, Optional[int], int]:
     try:
         video_data = subprocess.run(
             # fmt:off
@@ -61,9 +62,10 @@ def get_video_info(video_path: Path) -> Tuple[Tuple[int, int], str, int, int]:
             capture_output=True,
             check=True,
         )
-    except subprocess.CalledProcessError as e:
-        ffmpeg_error_handler(e.stderr)
-    stream_data = json.loads(video_data.stdout)['streams'][0]
+    except subprocess.CalledProcessError as error:
+        ffmpeg_error_handler(error.stderr)
+
+    stream_data: Dict[str, Any] = json.loads(video_data.stdout)['streams'][0]  # type: ignore
     return (
         (stream_data['width'], stream_data['height']),
         stream_data['r_frame_rate'],
@@ -88,6 +90,7 @@ def split_audio(video_path: Path) -> bool:
     except subprocess.CalledProcessError:
         localization.print('no_audio')
         return False
+
     return True
 
 
@@ -95,42 +98,31 @@ def split_frames(video_path: Path, transparent: bool, threads: int):
     command = ['ffmpeg', '-threads', f'{threads}', '-y']
     if transparent:
         command += ['-vcodec', 'libvpx']
-    command += ['-i', video_path, TmpPaths.tmp_frame_files]
+    command += ['-i', video_path, '-q:v', '0', TmpPaths.tmp_frame_files]
+
     try:
         out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
-    except subprocess.CalledProcessError as e:
-        ffmpeg_error_handler(e.stderr)
+    except subprocess.CalledProcessError as error:
+        ffmpeg_error_handler(error.stderr)
 
 
-def exec_command(command: List[str], extra_data: Tuple[List[bool], int, int, int] = None):
+def exec_command(command: List[str], callback: Optional[Callable[[], None]] = None):
     try:
         out = subprocess.run(command, bufsize=_MAX_BUFFER_SIZE, capture_output=True, check=True)
-    except subprocess.CalledProcessError as e:
-        ffmpeg_error_handler(e.stderr)
-    if extra_data:
-        frames_processed, index, same_size_count, num_frames = extra_data
-        for i in range(index - same_size_count - 1, index - 1):
-            frames_processed[i] = True
-        localization.print(
-            'convert_progress',
-            args={
-                'framecount': f'{same_size_count:>5}',
-                'startframe': index - same_size_count,
-                'endframe': index,
-                'batch_size': num_frames,
-                'percent': f'{100*frames_processed.count(True) / num_frames:.1f}',
-            },
-            end='\r',
-        )
+    except subprocess.CalledProcessError as error:
+        ffmpeg_error_handler(error.stderr)
+
+    if callback:
+        callback()
 
 
 def get_frames_audio_levels(video_path: Path):
     try:
-        frames_dbs = subprocess.run(
+        out = subprocess.run(
             # fmt:off
             [
                 'ffprobe', '-f', 'lavfi',
-                '-i', f'amovie={get_valid_path(video_path, filter=True)},astats=metadata=1:reset=1',
+                '-i', f'amovie={get_valid_path(video_path, _filter=True)},astats=metadata=1:reset=1',
                 '-show_entries', 'frame=pkt_pts_time:frame_tags=lavfi.astats.Overall.RMS_level',
                 '-of', 'json',
             ],
@@ -139,14 +131,14 @@ def get_frames_audio_levels(video_path: Path):
             capture_output=True,
             check=True,
         )
-    except subprocess.CalledProcessError as e:
-        ffmpeg_error_handler(e.stderr)
+    except subprocess.CalledProcessError as error:
+        ffmpeg_error_handler(error.stderr)
 
-    highest: float = None
+    highest: Optional[float] = None
     frames_audio_levels: List[FrameAudioLevel] = []
     dbs_sum = 0
-    for frame_dbs in json.loads(frames_dbs.stdout)['frames']:
-        fal = FrameAudioLevel.from_dict(frame_dbs)
+    for frame_dbs in json.loads(out.stdout)['frames']:  # type: ignore
+        fal = FrameAudioLevel(frame_dbs)
         frames_audio_levels.append(fal)
 
         if highest is None:
@@ -157,8 +149,9 @@ def get_frames_audio_levels(video_path: Path):
 
         dbs_sum += fal.dbs if fal.dbs != float('-inf') else 0
 
-    if highest == float('-inf'):
+    if highest is None or highest == float('-inf'):
         localization.print('no_audio')
+        sys.exit(1)
 
     average = dbs_sum / len(frames_audio_levels)
     deviation = abs((highest - average) / 2)
@@ -171,7 +164,7 @@ def get_frames_audio_levels(video_path: Path):
     return frames_audio_levels
 
 
-def find_min_non_error_size(width, height):
+def find_min_non_error_size(width: int, height: int) -> int:
     def av_reduce_succeeds(num, den):
         MAX = 255
         a0 = [0, 1]
@@ -211,3 +204,5 @@ def find_min_non_error_size(width, height):
     for i in range(1, max(width, height)):
         if av_reduce_succeeds(i, height) and av_reduce_succeeds(width, i):
             return i
+
+    return 0

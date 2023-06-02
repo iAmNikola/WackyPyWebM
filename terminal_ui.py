@@ -1,7 +1,7 @@
 import argparse
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from termcolor import colored
 
@@ -66,7 +66,6 @@ def mode_selection() -> Dict[str, str]:
 
 def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
     flags: Dict[str, str] = {}
-    file_path: Path = None
 
     def draw_options():
         terminal_clear()
@@ -120,7 +119,7 @@ def set_options(keys_to_flags: Dict[str, str]) -> Tuple[Dict[str, str], Path]:
         draw_file_input(file_not_found=True)
 
 
-def review_options(flags: Dict[str, str], file_path: Path):
+def review_options(flags: Dict[str, Any], file_path: Path):
     def draw():
         terminal_clear()
         localization.colored_print('review_settings', attrs=['bold', 'underline'])
@@ -136,7 +135,8 @@ def review_options(flags: Dict[str, str], file_path: Path):
             if 'bitrate' not in flags:
                 flags['bitrate'] = '1M'
             if 'threads' not in flags:
-                flags['threads'] = os.cpu_count() + 4
+                cpu_count = os.cpu_count()
+                flags['threads'] = cpu_count if cpu_count else 0 + 4
             if 'tempo' not in flags:
                 flags['tempo'] = 2
             if 'angle' not in flags:
@@ -148,7 +148,7 @@ def review_options(flags: Dict[str, str], file_path: Path):
             if 'smoothing' not in flags:
                 flags['smoothing'] = 0
             if 'output' not in flags:
-                flags['output'] = str(
+                flags['output'] = (
                     file_path.parent / f'{file_path.stem}_{TerminalUI.modes[TerminalUI.selected_mode]}.webm'
                 )
             if 'keyframes' not in flags:
@@ -163,8 +163,8 @@ if __name__ == '__main__':
 
     localization.set_locale(args.language)
 
-    keys_to_flags = mode_selection()
-    flags, file_path = set_options(keys_to_flags)
-    flags = review_options(flags, file_path)
+    KEYS_TO_FLAGS = mode_selection()
+    FLAGS, FILE_PATH = set_options(KEYS_TO_FLAGS)
+    FLAGS = review_options(FLAGS, FILE_PATH)
 
-    wackypywebm.wackify([TerminalUI.modes[TerminalUI.selected_mode]], file_path, flags, flags.output)
+    wackypywebm.wackify([TerminalUI.modes[TerminalUI.selected_mode]], FILE_PATH, FLAGS, FLAGS.output)

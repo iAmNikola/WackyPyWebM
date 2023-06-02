@@ -10,8 +10,8 @@ class Mode(ModeBase):
     def get_frame_bounds(cls, data: Data) -> FrameBounds:
         if data.frame_index == 0:
             return FrameBounds(width=data.width, height=data.height)
-        else:
-            return FrameBounds(
-                width=math.floor(random.random() * data.width),
-                height=math.floor(random.random() * data.height),
-            )
+
+        return FrameBounds(
+            width=math.floor(random.random() * data.width),
+            height=math.floor(random.random() * data.height),
+        )
