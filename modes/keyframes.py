@@ -2,10 +2,10 @@ import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Union
+from typing import Callable, Dict, List, Optional, Union
 
-from data import Data, SetupData
 import localization
+from data import Data, SetupData
 from localization import localize_str
 from modes.mode_base import FrameBounds, ModeBase
 
@@ -45,10 +45,12 @@ class InterpolationData:
 class Mode(ModeBase):
     keyframes: List[KeyframeData] = []
     kf_index = 0
-    interp_modes: Dict[str, Callable[[str, InterpolationData], FrameBounds]] = {}
+    interp_modes: Dict[str, Callable[[InterpolationData], FrameBounds]] = {}
 
     @classmethod
-    def interpolation(cls, mode: str, data: InterpolationData, setup=False) -> FrameBounds:
+    def interpolation(
+        cls, mode: Optional[str] = None, data: Optional[InterpolationData] = None
+    ) -> Optional[FrameBounds]:
         def linear(data: InterpolationData):
             return FrameBounds(
                 width=math.floor(data.width + data.t * (data.next_width - data.width)),
@@ -58,17 +60,17 @@ class Mode(ModeBase):
         def instant(data: InterpolationData):
             return FrameBounds(width=data.width, height=data.height)
 
-        if setup:
-            lcls = dict(locals())  # copy to dict to prevent error
-            cls.interp_modes = {k: v for k, v in lcls.items() if callable(v) and k != 'cls'}
-            return
+        if mode and data:
+            return cls.interp_modes[mode](data)
 
-        return cls.interp_modes[mode](data)
+        lcls = dict(locals())  # copy to dict to prevent error
+        cls.interp_modes = {k: v for k, v in lcls.items() if callable(v) and k != 'cls'}
+        return
 
     @classmethod
     def setup(cls, setup_data: SetupData):
         localization.print('parsing_keyframes', args={'file': setup_data.keyframe_file})
-        cls.interpolation(None, None, setup=True)
+        cls.interpolation()
         cls.parse_keyframe_file(setup_data.keyframe_file, setup_data.fps, setup_data.width, setup_data.height)
 
     @classmethod
@@ -201,7 +203,6 @@ class Mode(ModeBase):
 
             while operator_stack:
                 postfix.append(operator_stack.pop())
-            print(postfix)
             return postfix
 
         def evaulate_postfix(postfix: List[Union[str, int]]) -> int:

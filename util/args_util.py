@@ -1,19 +1,20 @@
 import argparse
 import os
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Optional, Union
 
 from localization import get_locales
 
 
 class IArgs:
     file: Path
-    modes: List[str]
-    keyframes: Union[Path, None]
-    bitrate: Union[str, int, None]
+    modes: str
+    keyframes: Optional[Path]
+    bitrate: Optional[Union[str, int]]
     tempo: float
     angle: float
-    output: Union[Path, None]
+    output: Optional[Path]
     compression: int
     language: str
     transparency: int
@@ -27,7 +28,7 @@ class IArgs:
                 if not args[key].is_file():
                     print('[ERROR] Incorrect path to keyframe file provided.')
                     print_help()
-                    exit()
+                    sys.exit(1)
             elif key in ['compression', 'transparency', 'smoothing', 'threads']:
                 args[key] = int(value)
             elif key in ['angle', 'tempo']:
@@ -81,8 +82,8 @@ def get_arg_desc(dest):
     return 'NOT_FOUND'
 
 
-def parse_args() -> IArgs:
-    return PARSER.parse_args()
+def parse_args(*args) -> IArgs:
+    return PARSER.parse_args(*args)
 
 
 def print_help():

@@ -1,7 +1,9 @@
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from natsort import natsorted
 
@@ -17,7 +19,9 @@ from wackify_state import WackifyState
 MODES: Dict[str, ModeBase] = load_modes()
 
 
-def print_config(selected_modes: List[str], args: args_util.IArgs, video_info: Tuple[Tuple[int, int], str, int, int]):
+def print_config(
+    selected_modes: List[str], args: args_util.IArgs, video_info: Tuple[Tuple[int, int], str, Optional[int], int]
+):
     _, _, bitrate, _ = video_info
     localization.print('config_header')
     localization.print('config_mode_list', args={'modes': [mode.title() for mode in selected_modes]})
@@ -32,16 +36,16 @@ def print_config(selected_modes: List[str], args: args_util.IArgs, video_info: T
     localization.print('config_footer')
 
 
-def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, output_path: Path):
+def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, output_path: Optional[Path]):
     ws = WackifyState(MODES, selected_modes)
 
     video_info = ffmpeg_util.get_video_info(video_path)
     (ws.width, ws.height), ws.fps, bitrate, ws.num_frames = video_info
 
     if args.bitrate is None:
-        args.bitrate = min(bitrate or 500000, 1000000)
+        args.bitrate = min(bitrate or 500_000, 1_000_000)
 
-    ws.delta: int = ffmpeg_util.find_min_non_error_size(ws.width, ws.height)
+    ws.delta = ffmpeg_util.find_min_non_error_size(ws.width, ws.height)
     localization.print('info1', args={'delta': ws.delta, 'video': video_path})
 
     localization.print(
@@ -75,9 +79,9 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
 
     for mode in selected_modes:
         try:
-            if not ws.has_audio and MODES[mode].frames_audio_levels == []:
+            if not ws.has_audio and getattr(MODES[mode], 'frames_audio_levels') == []:
                 print(f"ERROR: Mode '{mode.title()}' needs audio!")
-                exit()
+                sys.exit(1)
         except AttributeError:
             pass
         MODES[mode].setup(setup_data)
@@ -86,7 +90,8 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
     localization.print('starting_conversion')
 
     ws.generate_smoothing_buffer(args.smoothing)
-    frames_processed = [False] * ws.num_frames
+
+    ws.start_progress_tracking()
     with ThreadPoolExecutor(max_workers=args.threads) as executor:
         for i, frame_path in enumerate(natsorted(TmpPaths.tmp_frames.glob('*.png')), start=1):
             data = Data(base_data, (i - 1), frame_path)
@@ -109,7 +114,7 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
                 executor.submit(
                     ffmpeg_util.exec_command,
                     command,
-                    extra_data=(frames_processed, i, ws.same_size_count, ws.num_frames),
+                    callback=partial(ws.update_progress_tracking, i, ws.same_size_count),
                 )
                 ws.tmp_webm_files.append(f'file {ffmpeg_util.get_valid_path(section_path)}\n')
                 ws.same_size_count = 1
@@ -117,13 +122,14 @@ def wackify(selected_modes: List[str], video_path: Path, args: args_util.IArgs, 
             else:
                 ws.same_size_count += 1
 
+    ws.finish_progress_tracking()
     terminal_util.fix_terminal()  # exit progress bar line
 
     end_time = time.perf_counter()
     localization.print('done_conversion', args={'time': f'{end_time - start_time:.2f}', 'framecount': ws.num_frames})
 
     localization.print('writing_concat_file')
-    with open(TmpPaths.tmp_concat_list, 'w') as tmp_concat_list:
+    with open(TmpPaths.tmp_concat_list, '+w', encoding='utf-8') as tmp_concat_list:
         tmp_concat_list.writelines(ws.tmp_webm_files)
 
     localization.print(f'concatenating{"_audio" if ws.has_audio else ""}')
@@ -152,13 +158,13 @@ if __name__ == '__main__':
     if not _args.file.is_file():
         localization.print('video_file_not_found', {'file': str(_args.file)})
         args_util.print_help()
-        exit()
+        sys.exit(1)
     _args.file = _args.file.resolve()
     _selected_modes = [mode.lower() for mode in _args.modes.split("+")]
     for selected_mode in _selected_modes:
         if selected_mode not in MODES:
             print(f'Mode "{selected_mode}" isn\'t available.')
-            exit()
+            sys.exit(1)
 
     if _args.output:
         _args.output = _args.output.resolve()

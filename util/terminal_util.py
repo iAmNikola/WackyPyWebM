@@ -90,7 +90,7 @@ def getch_but_it_actually_works() -> str:
     and sometimes use it for menu control and such. Printing raw ansi escape
     codes can cause your terminal to do things like move cursor three rows up.
 
-    Enter will return "\ r" on all platforms (without the space seen here)
+    Enter will return "\\r" on all platforms (without the space seen here)
     as the enter key will produce carriage return, but windows and linux
     interpret it differently in different contexts on higher level
     """
@@ -112,16 +112,15 @@ def terminal_clear():
 
 
 def fix_terminal():
-    print()
-    os.system('' if os.name == 'nt' else 'stty echo')
+    os.system('echo on' if os.name == 'nt' else 'stty echo')
 
 
 class KeyCodes:
-    quit = ['\x1a', '\x03']
-    arrow_up = ['\x1b[A', '\x00H']
-    arrow_down = ['\x1b[B', '\x00P']
-    arrow_right = ['\x1b[C', '\x00M']
-    arrow_left = ['\x1b[D', '\x00K']
+    quit = ('\x1a', '\x03')
+    arrow_up = ('\x1b[A', '\x00H')
+    arrow_down = ('\x1b[B', '\x00P')
+    arrow_right = ('\x1b[C', '\x00M')
+    arrow_left = ('\x1b[D', '\x00K')
     enter = '\r'
 
 
@@ -130,5 +129,5 @@ def get_key_press():
     if key in KeyCodes.quit:
         raise KeyboardInterrupt
     if key.upper() == 'Q':
-        exit(0)
+        sys.exit()
     return key

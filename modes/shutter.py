@@ -9,7 +9,7 @@ class Mode(ModeBase):
     def get_frame_bounds(cls, data: Data) -> FrameBounds:
         if data.frame_index == 0:
             return FrameBounds(width=data.width)
-        else:
-            return FrameBounds(
-                width=math.floor(abs(math.cos((data.frame_index / (data.fps / data.tempo)) * math.pi) * data.width)),
-            )
+
+        return FrameBounds(
+            width=math.floor(abs(math.cos((data.frame_index / (data.fps / data.tempo)) * math.pi) * data.width)),
+        )

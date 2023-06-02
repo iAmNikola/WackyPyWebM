@@ -17,14 +17,14 @@ class Mode(ModeBase):
     def get_frame_bounds(cls, data: Data) -> FrameBounds:
         if data.frame_index == 0:
             return FrameBounds(width=data.width)
-        else:
-            fal = cls.frames_audio_levels[
-                max(
-                    min(
-                        math.floor((data.frame_index / (data.num_frames - 1)) * (len(cls.frames_audio_levels) - 1)),
-                        (len(cls.frames_audio_levels) - 1),
-                    ),
-                    0,
-                )
-            ]
-            return FrameBounds(height=math.floor(abs(data.width * fal.percent_max)))
+
+        fal = cls.frames_audio_levels[
+            max(
+                min(
+                    math.floor((data.frame_index / (data.num_frames - 1)) * (len(cls.frames_audio_levels) - 1)),
+                    (len(cls.frames_audio_levels) - 1),
+                ),
+                0,
+            )
+        ]
+        return FrameBounds(width=math.floor(abs(data.width * fal.percent_max)))

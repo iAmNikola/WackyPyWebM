@@ -1,20 +1,22 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Union
-from data import SetupData, Data
+from typing import Dict, Optional, Union
+
+from data import Data, SetupData
 
 
 def load_modes():
     modes = {}
-    for mode in (Path(__file__).parent.resolve()).glob('*.py'):
+    for mode in Path(__file__).parent.resolve().glob('*.py'):
         if mode.stem != 'mode_base':
             modes[mode.stem] = __import__(f'modes.{mode.stem}', fromlist=['Mode']).Mode
     return modes
 
 
 class FrameBounds:
-    def __init__(self, width: int = None, height: int = None, vf_command: str = None) -> None:
+    __slots__ = ('width', 'height', 'vf_command')
+
+    def __init__(self, width: int = None, height: int = None, vf_command: Optional[str] = None) -> None:  # type: ignore
         self.width = width
         self.height = height
         self.vf_command = [vf_command] if vf_command else None
@@ -34,14 +36,12 @@ class FrameBounds:
         )
 
 
-@dataclass
 class FrameAudioLevel:
-    dbs: float
-    percent_max: float
+    __slots__ = ('dbs', 'percent_max')
 
-    @classmethod
-    def from_dict(cls, frame_dbs: Dict[str, Dict[str, Union[str, float]]]):
-        return cls(float(frame_dbs['tags']['lavfi.astats.Overall.RMS_level']), None)
+    def __init__(self, frame_dbs: Dict[str, Dict[str, Union[str, float]]]) -> None:
+        self.dbs = float(frame_dbs['tags']['lavfi.astats.Overall.RMS_level'])
+        self.percent_max = 0.0
 
 
 class ModeBase(ABC):

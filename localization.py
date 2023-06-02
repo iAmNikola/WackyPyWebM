@@ -1,6 +1,7 @@
 import json
+import sys
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Optional
 
 
 class Localization:
@@ -14,11 +15,11 @@ def get_locales() -> List[str]:
 
 
 def set_locale(lang) -> None:
-    with open(Localization.folder / f'{lang}.json') as f:
+    with open(Localization.folder / f'{lang}.json', encoding='utf-8') as f:
         Localization.current_locale = json.load(f)
 
 
-def localize_str(key: str, args: Union[Dict[str, str], None]) -> str:
+def localize_str(key: str, args: Optional[Dict[str, str]]) -> str:
     if key in Localization.current_locale:
         raw_text = Localization.current_locale[key]
     else:
@@ -34,11 +35,16 @@ def localize_str(key: str, args: Union[Dict[str, str], None]) -> str:
 _print = print
 
 
-def print(key: str, args: Dict[str, str] = None, end='\n', *other):
+def print(key: str, args: Optional[Dict[str, Any]] = None, end='\n', *other):
     _print(localize_str(key, args), *other, end=end)
 
 
-def colored_print(key, args: Dict[str, str] = None, attrs: List[str] = None, *other):
+def colored_print(key, args: Optional[Dict[str, str]] = None, attrs: Optional[List[str]] = None, *other: Any):
     from termcolor import colored
 
     _print(colored(localize_str(key, args), attrs=attrs), *other)
+
+
+def progress_bar_print(key: str, args: Optional[Dict[str, Any]]):
+    sys.stdout.write('\r' + localize_str(key, args))
+    sys.stdout.flush()

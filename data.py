@@ -1,36 +1,54 @@
-from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 
-@dataclass
 class SetupData:
-    video_path: Path
-    width: int
-    height: int
-    num_frames: int
-    fps: float
-    keyframe_file: Path
+    __slots__ = ('video_path', 'width', 'height', 'num_frames', 'fps', 'keyframe_file')
+
+    def __init__(
+        self,
+        video_path: Path,
+        width: int,
+        height: int,
+        num_frames: int,
+        fps: float,
+        keyframe_file: Optional[Path] = None,
+    ) -> None:
+        self.video_path = video_path
+        self.width = width
+        self.height = height
+        self.num_frames = num_frames
+        self.fps = fps
+        self.keyframe_file = keyframe_file
 
 
-@dataclass
 class BaseData:
-    width: int
-    height: int
-    num_frames: int
-    fps: float
-    tempo: float
-    angle: float
-    transparency: int
+    __slots__ = ('width', 'height', 'num_frames', 'fps', 'tempo', 'angle', 'transparency')
+
+    def __init__(
+        self, width: int, height: int, num_frames: int, fps: float, tempo: float, angle: float, transparency: int
+    ) -> None:
+        self.width = width
+        self.height = height
+        self.num_frames = num_frames
+        self.fps = fps
+        self.tempo = tempo
+        self.angle = angle
+        self.transparency = transparency
 
 
 class Data(BaseData):
-    def __init__(self, base_data: BaseData, frame_index: int, frame_path: Path):
-        self.width = base_data.width
-        self.height = base_data.height
-        self.num_frames = base_data.num_frames
-        self.fps = base_data.fps
-        self.tempo = base_data.tempo
-        self.angle = base_data.angle
-        self.transparency = base_data.transparency
+    __slots__ = ('frame_index', 'frame_path')
+
+    def __init__(self, base_data: BaseData, frame_index: int, frame_path: Path) -> None:
+        super().__init__(
+            base_data.width,
+            base_data.height,
+            base_data.num_frames,
+            base_data.fps,
+            base_data.tempo,
+            base_data.angle,
+            base_data.transparency,
+        )
         self.frame_index = frame_index
         self.frame_path = frame_path
